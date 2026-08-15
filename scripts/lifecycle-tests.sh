@@ -9,7 +9,8 @@ LINKED_CONTAINER=linked
 WATCHTOWER_INTERVAL=2
 
 function remove_container {
-	docker kill $1 >> /dev/null || true && docker rm -v $1 >> /dev/null || true
+	docker kill "$1" >> /dev/null || true
+	docker rm -v "$1" >> /dev/null || true
 }
 
 function cleanup {
@@ -93,7 +94,7 @@ echo "Container $CONTAINER is running"
 
 # Test default value
 RESP=$(curl -s http://localhost:8888)
-if [ $RESP != "default" ]; then
+if [ "$RESP" != "default" ]; then
 	echo "Default value of container response is invalid" 1>&2
 	exit 1
 fi
@@ -101,7 +102,7 @@ fi
 # Build updated image to trigger watchtower update
 builddocker
 
-WAIT_AMOUNT=$(($WATCHTOWER_INTERVAL * 3))
+WAIT_AMOUNT=$((WATCHTOWER_INTERVAL * 3))
 echo "Wait for $WAIT_AMOUNT seconds"
 sleep $WAIT_AMOUNT
 
@@ -130,7 +131,7 @@ echo "Container $CONTAINER is running"
 
 # Test default value
 RESP=$(curl -s http://localhost:8888)
-if [ $RESP != "default" ]; then
+if [ "$RESP" != "default" ]; then
 	echo "Default value of container response is invalid" 1>&2
 	exit 1
 fi
@@ -138,7 +139,7 @@ fi
 # Build updated image to trigger watchtower update
 builddocker
 
-WAIT_AMOUNT=$(($WATCHTOWER_INTERVAL * 3))
+WAIT_AMOUNT=$((WATCHTOWER_INTERVAL * 3))
 echo "Wait for $WAIT_AMOUNT seconds"
 sleep $WAIT_AMOUNT
 
@@ -174,14 +175,14 @@ echo "Container $CONTAINER and $LINKED_CONTAINER are running"
 
 # Test default value
 RESP=$(curl -s http://localhost:8888)
-if [ $RESP != "default" ]; then
+if [ "$RESP" != "default" ]; then
 	echo "Default value of container response is invalid" 1>&2
 	exit 1
 fi
 
 # Test default value for linked container
 RESP=$(curl -s http://localhost:8989)
-if [ $RESP != "default" ]; then
+if [ "$RESP" != "default" ]; then
 	echo "Default value of linked container response is invalid" 1>&2
 	exit 1
 fi
@@ -189,7 +190,7 @@ fi
 # Build updated image to trigger watchtower update
 builddocker
 
-WAIT_AMOUNT=$(($WATCHTOWER_INTERVAL * 3))
+WAIT_AMOUNT=$((WATCHTOWER_INTERVAL * 3))
 echo "Wait for $WAIT_AMOUNT seconds"
 sleep $WAIT_AMOUNT
 

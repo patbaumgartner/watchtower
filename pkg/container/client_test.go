@@ -11,9 +11,8 @@ import (
 
 	dockerContainer "github.com/docker/docker/api/types/container"
 
-	"github.com/docker/docker/api/types/backend"
+	cerrdefs "github.com/containerd/errdefs"
 	cli "github.com/docker/docker/client"
-	"github.com/docker/docker/errdefs"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/ghttp"
 	"github.com/sirupsen/logrus"
@@ -135,7 +134,7 @@ var _ = Describe("the client", func() {
 				c := dockerClient{api: docker}
 
 				err := c.RemoveImageByID(t.ImageID(image))
-				Expect(errdefs.IsNotFound(err)).To(BeTrue())
+				Expect(cerrdefs.IsNotFound(err)).To(BeTrue())
 			})
 		})
 	})
@@ -252,7 +251,7 @@ var _ = Describe("the client", func() {
 	})
 	Describe(`ExecuteCommand`, func() {
 		When(`logging`, func() {
-			It("should include container id field", func() {
+			It("should include container id field when attach fails", func() {
 				client := dockerClient{
 					api:           docker,
 					ClientOptions: ClientOptions{},
@@ -283,7 +282,8 @@ var _ = Describe("the client", func() {
 						}),
 						ghttp.RespondWithJSONEncoded(http.StatusOK, dockerContainer.ExecCreateResponse{ID: execID}),
 					),
-					// API.ContainerExecStart
+					// API.ContainerExecAttach starts the exec. A regular HTTP response
+					// intentionally makes the mock fail the connection upgrade.
 					ghttp.CombineHandlers(
 						ghttp.VerifyRequest("POST", HaveSuffix("exec/%v/start", execID)),
 						ghttp.VerifyJSONRepresenting(dockerContainer.ExecStartOptions{
@@ -292,27 +292,10 @@ var _ = Describe("the client", func() {
 						}),
 						ghttp.RespondWith(http.StatusOK, nil),
 					),
-					// API.ContainerExecInspect
-					ghttp.CombineHandlers(
-						ghttp.VerifyRequest("GET", HaveSuffix("exec/ex-exec-id/json")),
-						ghttp.RespondWithJSONEncoded(http.StatusOK, backend.ExecInspect{
-							ID:       execID,
-							Running:  false,
-							ExitCode: nil,
-							ProcessConfig: &backend.ExecProcessConfig{
-								Entrypoint: "sh",
-								Arguments:  []string{"-c", cmd},
-								User:       user,
-							},
-							ContainerID: string(containerID),
-						}),
-					),
 				)
 
 				_, err := client.ExecuteCommand(containerID, cmd, 1)
-				Expect(err).NotTo(HaveOccurred())
-				// Note: Since Execute requires opening up a raw TCP stream to the daemon for the output, this will fail
-				// when using the mock API server. Regardless of the outcome, the log should include the container ID
+				Expect(err).To(HaveOccurred())
 				Eventually(logbuf).Should(gbytes.Say(`containerID="?ex-cont-id"?`))
 			})
 		})
@@ -328,11 +311,13 @@ var _ = Describe("the client", func() {
 
 				aliases := []string{"One", "Two", container.ID().ShortID(), "Four"}
 				endpoints := map[string]*network.EndpointSettings{
-					`test`: {Aliases: aliases},
+					`test`: {Aliases: aliases, MacAddress: "02:42:ac:11:00:02"},
 				}
 				container.containerInfo.NetworkSettings = &dockerContainer.NetworkSettings{Networks: endpoints}
 				Expect(container.ContainerInfo().NetworkSettings.Networks[`test`].Aliases).To(Equal(aliases))
 				Expect(client.GetNetworkConfig(container).EndpointsConfig[`test`].Aliases).To(Equal([]string{"One", "Two", "Four"}))
+				Expect(client.GetNetworkConfig(container).EndpointsConfig[`test`].MacAddress).To(BeEmpty())
+				Expect(container.ContainerInfo().NetworkSettings.Networks[`test`].MacAddress).To(Equal("02:42:ac:11:00:02"))
 			})
 		})
 	})

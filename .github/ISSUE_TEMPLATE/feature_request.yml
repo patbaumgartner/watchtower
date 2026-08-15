@@ -1,6 +1,6 @@
 name: 💡 Feature request
 description: Have a new idea/feature ? Please suggest!
-labels: ["Priority: Low, Status: Available, Type: Enhancement"]
+labels: ["enhancement", "needs triage"]
 body:
   - type: textarea
     id: description

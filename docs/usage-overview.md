@@ -1,4 +1,19 @@
-Watchtower is itself packaged as a Docker container so installation is as simple as pulling the `containrrr/watchtower` image. If you are using ARM based architecture, pull the appropriate `containrrr/watchtower:armhf-<tag>` image from the [containrrr Docker Hub](https://hub.docker.com/r/containrrr/watchtower/tags/).
+Watchtower is itself packaged as a Docker container, so installation is as simple as pulling the
+`patbaumgartner/watchtower` image from Docker Hub. Every tag is a multi-architecture manifest, so `docker pull` and
+`docker run` select the build matching your host — there are no per-architecture tags to choose between.
+
+| Platform | Typical hardware |
+| --- | --- |
+| `linux/amd64` | Intel / AMD servers, desktops, and x86 NAS devices |
+| `linux/arm64` | Raspberry Pi 3/4/5 (64-bit OS), Apple Silicon, ARM NAS devices |
+| `linux/arm/v7` | Raspberry Pi 2/3 (32-bit OS), older ARM NAS devices |
+| `linux/386` | 32-bit x86 hosts |
+
+Images are published to Docker Hub:
+
+```bash
+docker pull patbaumgartner/watchtower
+```
 
 Since the watchtower code needs to interact with the Docker API in order to monitor the running containers, you need to mount _/var/run/docker.sock_ into the container with the `-v` flag when you run it.
 
@@ -8,8 +23,42 @@ Run the `watchtower` container with the following command:
 docker run -d \
   --name watchtower \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  containrrr/watchtower
+  patbaumgartner/watchtower
 ```
+
+## Synology and other NAS devices
+
+Watchtower runs unmodified on Synology DSM 7 via **Container Manager**, and on comparable NAS container runtimes,
+because it talks to the standard Docker Engine API over the UNIX socket.
+
+1. In Container Manager, open **Registry**, search for `watchtower`, and download
+  `patbaumgartner/watchtower`. Container Manager pulls the manifest entry for your NAS CPU automatically.
+2. Create a container from the image and add a bind mount from `/var/run/docker.sock` to `/var/run/docker.sock`.
+3. Enable auto-restart so watchtower comes back after a DSM reboot.
+
+Alternatively, use the **Project** feature with this `docker-compose.yml`:
+
+```yaml
+services:
+  watchtower:
+    image: patbaumgartner/watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=Europe/Zurich
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_LABEL_ENABLE=true
+      - WATCHTOWER_SCHEDULE=0 0 4 * * *
+```
+
+!!! note "DSM package updates are not managed"
+    Watchtower updates containers only. DSM itself and Synology packages are updated through DSM, not watchtower.
+
+!!! warning "Do not let watchtower restart Container Manager's own containers blindly"
+    On a NAS it is usually better to opt in explicitly. Start watchtower with `--label-enable` and set
+    `com.centurylinklabs.watchtower.enable=true` on the containers you actually want updated. See
+    [Container selection](container-selection.md).
 
 If pulling images from private Docker registries, supply registry authentication credentials with the environment variables `REPO_USER` and `REPO_PASS`
 or by mounting the host's docker config file into the container (at the root of the container filesystem `/`).
@@ -22,7 +71,7 @@ docker run -d \
   -e REPO_USER=username \
   -e REPO_PASS=password \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  containrrr/watchtower container_to_watch --debug
+  patbaumgartner/watchtower container_to_watch --debug
 ```
 
 Also check out [this Stack Overflow answer](https://stackoverflow.com/a/30494145/7872793) for more options on how to pass environment variables.
@@ -34,7 +83,7 @@ docker run -d \
   --name watchtower \
   -v $HOME/.docker/config.json:/config.json \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  containrrr/watchtower container_to_watch --debug
+  patbaumgartner/watchtower container_to_watch --debug
 ```
 
 !!! note "Changes to config.json while running"
@@ -60,7 +109,7 @@ services:
       - "443:3443"
       - "80:3080"
   watchtower:
-    image: containrrr/watchtower
+    image: patbaumgartner/watchtower
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /root/.docker/config.json:/config.json

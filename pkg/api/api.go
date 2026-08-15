@@ -82,7 +82,6 @@ func (api *API) runHTTPServer() {
 		Handler:           api.mux,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      60 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
 	log.Fatal(server.ListenAndServe())

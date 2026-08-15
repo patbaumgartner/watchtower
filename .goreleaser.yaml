@@ -1,0 +1,49 @@
+version: 2
+
+project_name: watchtower
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - main: ./main.go
+    binary: watchtower
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/patbaumgartner/watchtower/internal/meta.Version={{.Version}}
+    goos: [linux, darwin, windows]
+    goarch: ["386", amd64, arm, arm64]
+    goarm: ["6", "7"]
+    ignore:
+      - goos: darwin
+        goarch: "386"
+      - goos: darwin
+        goarch: arm
+      - goos: windows
+        goarch: arm
+
+archives:
+  - name_template: >-
+      {{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE.md
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: github-native
+
+release:
+  # Container images are built and pushed by .github/workflows/release.yml with buildx,
+  # so goreleaser only publishes binaries and checksums.
+  prerelease: auto

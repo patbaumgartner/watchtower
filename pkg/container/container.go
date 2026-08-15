@@ -11,8 +11,6 @@ import (
 	wt "github.com/patbaumgartner/watchtower/pkg/types"
 	"github.com/sirupsen/logrus"
 
-	"github.com/docker/docker/api/types/container"
-
 	dockercontainer "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/go-connections/nat"
@@ -20,19 +18,19 @@ import (
 
 // NewContainer returns a new Container instance instantiated with the
 // specified ContainerInfo and ImageInfo structs.
-func NewContainer(containerInfo *container.InspectResponse, imageInfo *image.InspectResponse) *Container {
+func NewContainer(containerInfo *dockercontainer.InspectResponse, imageInfo *image.InspectResponse) *Container {
 	return &Container{
 		containerInfo: containerInfo,
 		imageInfo:     imageInfo,
 	}
 }
 
-// Container represents a running Docker container.
+// Container represents a running Docker dockercontainer.
 type Container struct {
 	LinkedToRestarting bool
 	Stale              bool
 
-	containerInfo *container.InspectResponse
+	containerInfo *dockercontainer.InspectResponse
 	imageInfo     *image.InspectResponse
 }
 
@@ -57,7 +55,7 @@ func (c *Container) SetStale(value bool) {
 }
 
 // ContainerInfo fetches JSON info for the container
-func (c Container) ContainerInfo() *container.InspectResponse {
+func (c Container) ContainerInfo() *dockercontainer.InspectResponse {
 	return c.containerInfo
 }
 
@@ -86,7 +84,7 @@ func (c Container) Name() string {
 }
 
 // ImageID returns the ID of the Docker image that was used to start the
-// container. May cause nil dereference if imageInfo is not set!
+// dockercontainer. May cause nil dereference if imageInfo is not set!
 func (c Container) ImageID() wt.ImageID {
 	return wt.ImageID(c.imageInfo.ID)
 }
@@ -101,7 +99,7 @@ func (c Container) SafeImageID() wt.ImageID {
 }
 
 // ImageName returns the name of the Docker image that was used to start the
-// container. If the original image was specified without a particular tag, the
+// dockercontainer. If the original image was specified without a particular tag, the
 // "latest" tag is assumed.
 func (c Container) ImageName() string {
 	// Compatibility w/ Zodiac deployments
@@ -208,7 +206,7 @@ func (c Container) Links() []string {
 }
 
 // ToRestart return whether the container should be restarted, either because
-// is stale or linked to another stale container.
+// is stale or linked to another stale dockercontainer.
 func (c Container) ToRestart() bool {
 	return c.Stale || c.LinkedToRestarting
 }
@@ -327,6 +325,11 @@ func (c Container) GetCreateConfig() *dockercontainer.Config {
 		if config.Healthcheck.StartPeriod == imageConfig.Healthcheck.StartPeriod {
 			config.Healthcheck.StartPeriod = 0
 		}
+	}
+
+	// The client supports Docker API 1.25, while StartInterval requires 1.44.
+	if config.Healthcheck != nil {
+		config.Healthcheck.StartInterval = 0
 	}
 
 	config.Env = util.SliceSubtract(config.Env, imageConfig.Env)

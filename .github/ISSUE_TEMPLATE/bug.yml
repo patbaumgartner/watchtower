@@ -1,11 +1,14 @@
 name: 🐛 Bug report
 description: Create a report to help us improve
-labels: ["Priority: Medium, Status: Available, Type: Bug"]
+labels: ["bug", "needs triage"]
 
 body:
   - type: markdown
     attributes:
-      value: Before submitting your issue, please make sure you're using the containrrr/watchtower:latest image. If not, switch to this image prior to posting your report. Other forks, or the old `v2tec` image are **not** supported.
+      value: |
+        Please reproduce against the latest image before reporting:
+        `patbaumgartner/watchtower:latest`. Reports against
+        the retired `containrrr/watchtower` or the old `v2tec` image cannot be acted on here.
 
   - type: textarea
     id: description

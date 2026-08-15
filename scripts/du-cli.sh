@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 
 SCRIPT_ROOT=$(dirname "$(readlink -m "$(type -p "$0")")")
+# shellcheck source=scripts/docker-util.sh
 source "$SCRIPT_ROOT/docker-util.sh"
 
 case $1 in
   registry | reg | r)
     case $2 in
       start)
-        start-registry
+        start-registry "${3:-5000}"
         ;;
       stop)
         stop-registry
@@ -60,7 +61,7 @@ case $1 in
         fi
         if ! registry-exists; then
           echo "Registry container missing! Creating..."
-          start-registry || exit 1
+          start-registry 5000 || exit 1
         fi
         image_name="images/$3"
         container_name=$3

@@ -23,7 +23,15 @@ const ChallengeHeader = "WWW-Authenticate"
 // registry cannot exhaust memory.
 const maxTokenResponseBytes = 1 << 20
 
-var authClient = &http.Client{Timeout: 30 * time.Second}
+var authClient = &http.Client{
+	Timeout: 30 * time.Second,
+	CheckRedirect: func(req *http.Request, _ []*http.Request) error {
+		if req.URL.Scheme != "https" {
+			return errors.New("registry authentication redirect must use HTTPS")
+		}
+		return nil
+	},
+}
 
 // GetToken fetches a token for the registry hosting the provided image
 func GetToken(container types.Container, registryAuth string) (string, error) {
@@ -153,6 +161,9 @@ func GetAuthURL(challenge string, imageRef ref.Named) (*url.URL, error) {
 	}
 	if authURL.Host == "" {
 		return nil, errors.New("challenge header realm is not an absolute URL")
+	}
+	if authURL.Scheme != "https" {
+		return nil, errors.New("challenge header realm must use HTTPS")
 	}
 
 	q := authURL.Query()

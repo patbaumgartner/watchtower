@@ -144,6 +144,14 @@ var _ = Describe("the auth module", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(res).To(BeNil())
 		})
+		It("should reject a realm that does not use HTTPS", func() {
+			input := `bearer realm="http://ghcr.io/token",service="ghcr.io"`
+			imageRef, err := ref.ParseNormalizedNamed("patbaumgartner/watchtower")
+			Expect(err).NotTo(HaveOccurred())
+			res, err := auth.GetAuthURL(input, imageRef)
+			Expect(err).To(MatchError("challenge header realm must use HTTPS"))
+			Expect(res).To(BeNil())
+		})
 	})
 
 	Describe("GetChallengeURL", func() {

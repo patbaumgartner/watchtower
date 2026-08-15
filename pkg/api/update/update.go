@@ -3,7 +3,6 @@ package update
 import (
 	"io"
 	"net/http"
-	"os"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -38,9 +37,13 @@ type Handler struct {
 func (handle *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	log.Info("Updates triggered by HTTP API request.")
 
-	_, err := io.Copy(os.Stdout, r.Body)
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1))
 	if err != nil {
-		log.Println(err)
+		http.Error(w, "request body must be empty", http.StatusRequestEntityTooLarge)
+		return
+	}
+	if len(body) != 0 {
+		http.Error(w, "request body must be empty", http.StatusBadRequest)
 		return
 	}
 
@@ -56,7 +59,12 @@ func (handle *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(images) > 0 {
-		chanValue := <-lock
+		var chanValue bool
+		select {
+		case chanValue = <-lock:
+		case <-r.Context().Done():
+			return
+		}
 		defer func() { lock <- chanValue }()
 		handle.fn(images)
 	} else {

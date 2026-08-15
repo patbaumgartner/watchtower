@@ -1,17 +1,17 @@
 site_name: Watchtower
-site_url: https://containrrr.dev/watchtower/
-repo_url: https://github.com/containrrr/watchtower/
+site_url: https://patbaumgartner.github.io/watchtower/
+repo_url: https://github.com/patbaumgartner/watchtower/
 edit_uri: edit/main/docs/
 theme:
   name: 'material'
   palette:
     - media: "(prefers-color-scheme: light)"
-      scheme: containrrr
+      scheme: watchtower
       toggle:
         icon: material/weather-night
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
-      scheme: containrrr-dark
+      scheme: watchtower-dark
       toggle:
         icon: material/weather-sunny
         name: Switch to light mode
@@ -29,7 +29,7 @@ markdown_extensions:
     - pymdownx.magiclink:
         repo_url_shortener: True
         provider: github
-        user: containrrr
+        user: patbaumgartner
         repo: watchtower
     - pymdownx.saneheaders
     - pymdownx.tabbed:
@@ -50,5 +50,7 @@ nav:
    - 'Running multiple instances': 'running-multiple-instances.md'
    - 'HTTP API Mode': 'http-api-mode.md'
    - 'Metrics': 'metrics.md'
+   - 'Updating watchtower': 'updating.md'
+   - 'Template preview': 'template-preview.md'
 plugins:
     - search

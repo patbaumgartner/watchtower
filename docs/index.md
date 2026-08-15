@@ -8,34 +8,26 @@
 <p align="center">
   A container-based solution for automating Docker container base image updates.
   <br/><br/>
-  <a href="https://circleci.com/gh/containrrr/watchtower">
-    <img alt="Circle CI" src="https://circleci.com/gh/containrrr/watchtower.svg?style=shield" />
+  <a href="https://github.com/patbaumgartner/watchtower/actions/workflows/ci.yml">
+    <img alt="CI" src="https://github.com/patbaumgartner/watchtower/actions/workflows/ci.yml/badge.svg?branch=main" />
   </a>
-  <a href="https://codecov.io/gh/containrrr/watchtower">
-    <img alt="Codecov" src="https://codecov.io/gh/containrrr/watchtower/branch/main/graph/badge.svg">
+  <a href="https://pkg.go.dev/github.com/patbaumgartner/watchtower">
+    <img alt="Go Reference" src="https://pkg.go.dev/badge/github.com/patbaumgartner/watchtower.svg" />
   </a>
-  <a href="https://godoc.org/github.com/containrrr/watchtower">
-    <img alt="GoDoc" src="https://godoc.org/github.com/containrrr/watchtower?status.svg" />
+  <a href="https://goreportcard.com/report/github.com/patbaumgartner/watchtower">
+    <img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/patbaumgartner/watchtower" />
   </a>
-  <a href="https://goreportcard.com/report/github.com/containrrr/watchtower">
-    <img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/containrrr/watchtower" />
-  </a>
-  <a href="https://github.com/containrrr/watchtower/releases">
-    <img alt="latest version" src="https://img.shields.io/github/tag/containrrr/watchtower.svg" />
+  <a href="https://github.com/patbaumgartner/watchtower/releases">
+    <img alt="latest version" src="https://img.shields.io/github/v/tag/patbaumgartner/watchtower?label=release" />
   </a>
   <a href="https://www.apache.org/licenses/LICENSE-2.0">
-    <img alt="Apache-2.0 License" src="https://img.shields.io/github/license/containrrr/watchtower.svg" />
-  </a>
-  <a href="https://www.codacy.com/gh/containrrr/watchtower/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=containrrr/watchtower&amp;utm_campaign=Badge_Grade">
-    <img alt="Codacy Badge" src="https://app.codacy.com/project/badge/Grade/1c48cfb7646d4009aa8c6f71287670b8"/>
-  </a>
-  <a href="https://github.com/containrrr/watchtower/#contributors">
-    <img alt="All Contributors" src="https://img.shields.io/github/all-contributors/containrrr/watchtower" />
-  </a>
-  <a href="https://hub.docker.com/r/containrrr/watchtower">
-    <img alt="Pulls from DockerHub" src="https://img.shields.io/docker/pulls/containrrr/watchtower.svg" />
+    <img alt="Apache-2.0 License" src="https://img.shields.io/github/license/patbaumgartner/watchtower.svg" />
   </a>
 </p>
+
+!!! info "Maintained fork"
+    This is a maintained fork of [containrrr/watchtower](https://github.com/containrrr/watchtower), which was retired
+  upstream. Images are published to Docker Hub as `patbaumgartner/watchtower`.
 
 ## Quick Start
 
@@ -50,7 +42,7 @@ the following command:
     $ docker run -d \
     --name watchtower \
     -v /var/run/docker.sock:/var/run/docker.sock \
-    containrrr/watchtower
+    patbaumgartner/watchtower
     ```
 
 === "docker-compose.yml"
@@ -59,7 +51,7 @@ the following command:
     version: "3"
     services:
       watchtower:
-        image: containrrr/watchtower
+        image: patbaumgartner/watchtower
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
     ```

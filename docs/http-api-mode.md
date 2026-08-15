@@ -16,7 +16,7 @@ services:
       - "com.centurylinklabs.watchtower.enable=true"
 
   watchtower:
-    image: containrrr/watchtower
+    image: patbaumgartner/watchtower
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     command: --debug --http-api-update
@@ -25,12 +25,15 @@ services:
     labels:
       - "com.centurylinklabs.watchtower.enable=false"
     ports:
-      - 8080:8080
+      - 127.0.0.1:8080:8080
 ```
 
 By default, enabling this mode prevents periodic polls (i.e. what is specified using `--interval` or `--schedule`). To run periodic updates regardless, pass `--http-api-periodic-polls`.
 
-Notice that there is an environment variable named WATCHTOWER_HTTP_API_TOKEN. To prevent external services from accidentally triggering image updates, all of the requests have to contain a "Token" field, valued as the token defined in WATCHTOWER_HTTP_API_TOKEN, in their headers. In this case, there is a port bind to the host machine, allowing to request localhost:8080 to reach Watchtower. The following `curl` command would trigger an image update:
+Notice that there is an environment variable named `WATCHTOWER_HTTP_API_TOKEN`. All requests must include its value as
+a bearer token in the `Authorization` header. The example binds the port to loopback so only the Docker host can reach
+it. For remote access, put the endpoint behind a TLS reverse proxy; otherwise the token is sent over cleartext HTTP.
+The following `curl` command would trigger an image update:
 
 ```bash
 curl -H "Authorization: Bearer mytoken" localhost:8080/v1/update

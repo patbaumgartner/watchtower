@@ -100,6 +100,14 @@ var _ = Describe("the container", func() {
 				Expect(c.GetCreateConfig().Healthcheck).To(Equal(&dc.HealthConfig{}))
 			})
 		})
+		When("container healthcheck has a start interval", func() {
+			It("should omit the field unsupported by Docker API 1.25", func() {
+				c := MockContainer(WithHealthcheck(dc.HealthConfig{
+					StartInterval: 5,
+				}))
+				Expect(c.GetCreateConfig().Healthcheck.StartInterval).To(BeZero())
+			})
+		})
 		When("container healthcheck config is different to image config", func() {
 			It("should return the container healthcheck values", func() {
 				c := MockContainer(WithHealthcheck(dc.HealthConfig{

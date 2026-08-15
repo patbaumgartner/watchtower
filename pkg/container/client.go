@@ -1,26 +1,29 @@
 package container
 
 import (
-	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"strings"
 	"time"
 
+	cerrdefs "github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 	sdkClient "github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 
 	"github.com/patbaumgartner/watchtower/pkg/registry"
 	"github.com/patbaumgartner/watchtower/pkg/registry/digest"
 	t "github.com/patbaumgartner/watchtower/pkg/types"
 )
 
-const defaultStopSignal = "SIGTERM"
+const (
+	defaultStopSignal = "SIGTERM"
+	maxHookOutput     = 1 << 20
+)
 
 // A Client is the interface through which watchtower interacts with the
 // Docker API.
@@ -77,7 +80,7 @@ const (
 )
 
 type dockerClient struct {
-	api sdkClient.CommonAPIClient
+	api sdkClient.APIClient
 	ClientOptions
 }
 
@@ -172,7 +175,7 @@ func (client dockerClient) GetContainer(containerID t.ContainerID) (t.Container,
 		}
 	}
 
-	imageInfo, _, err := client.api.ImageInspectWithRaw(bg, containerInfo.Image)
+	imageInfo, err := client.api.ImageInspect(bg, containerInfo.Image)
 	if err != nil {
 		log.Warnf("Failed to retrieve container image info: %v", err)
 		return &Container{containerInfo: &containerInfo, imageInfo: nil}, nil
@@ -207,7 +210,7 @@ func (client dockerClient) StopContainer(c t.Container, timeout time.Duration) e
 		log.Debugf("Removing container %s", shortID)
 
 		if err := client.api.ContainerRemove(bg, idStr, container.RemoveOptions{Force: true, RemoveVolumes: client.RemoveVolumes}); err != nil {
-			if sdkClient.IsErrNotFound(err) {
+			if cerrdefs.IsNotFound(err) {
 				log.Debugf("Container %s not found, skipping removal.", shortID)
 				return nil
 			}
@@ -225,10 +228,11 @@ func (client dockerClient) StopContainer(c t.Container, timeout time.Duration) e
 
 func (client dockerClient) GetNetworkConfig(c t.Container) *network.NetworkingConfig {
 	config := &network.NetworkingConfig{
-		EndpointsConfig: c.ContainerInfo().NetworkSettings.Networks,
+		EndpointsConfig: make(map[string]*network.EndpointSettings, len(c.ContainerInfo().NetworkSettings.Networks)),
 	}
 
-	for _, ep := range config.EndpointsConfig {
+	for name, endpoint := range c.ContainerInfo().NetworkSettings.Networks {
+		ep := *endpoint
 		aliases := make([]string, 0, len(ep.Aliases))
 		cidAlias := c.ID().ShortID()
 
@@ -241,6 +245,8 @@ func (client dockerClient) GetNetworkConfig(c t.Container) *network.NetworkingCo
 		}
 
 		ep.Aliases = aliases
+		ep.MacAddress = ""
+		config.EndpointsConfig[name] = &ep
 	}
 	return config
 }
@@ -332,7 +338,7 @@ func (client dockerClient) HasNewImage(ctx context.Context, container t.Containe
 	currentImageID := t.ImageID(container.ContainerInfo().ContainerJSONBase.Image)
 	imageName := container.ImageName()
 
-	newImageInfo, _, err := client.api.ImageInspectWithRaw(ctx, imageName)
+	newImageInfo, err := client.api.ImageInspect(ctx, imageName)
 	if err != nil {
 		return false, currentImageID, err
 	}
@@ -398,7 +404,7 @@ func (client dockerClient) PullImage(ctx context.Context, container t.Container)
 
 	defer response.Close()
 	// the pull request will be aborted prematurely unless the response is read
-	if _, err = io.ReadAll(response); err != nil {
+	if _, err = io.Copy(io.Discard, response); err != nil {
 		log.Error(err)
 		return err
 	}
@@ -440,7 +446,12 @@ func (client dockerClient) RemoveImageByID(id t.ImageID) error {
 }
 
 func (client dockerClient) ExecuteCommand(containerID t.ContainerID, command string, timeout int) (SkipUpdate bool, err error) {
-	bg := context.Background()
+	ctx := context.Background()
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Minute)
+		defer cancel()
+	}
 	clog := log.WithField("containerID", containerID)
 
 	// Create the exec
@@ -450,41 +461,47 @@ func (client dockerClient) ExecuteCommand(containerID t.ContainerID, command str
 		Cmd:    []string{"sh", "-c", command},
 	}
 
-	exec, err := client.api.ContainerExecCreate(bg, string(containerID), execConfig)
+	exec, err := client.api.ContainerExecCreate(ctx, string(containerID), execConfig)
 	if err != nil {
 		return false, err
 	}
 
-	response, attachErr := client.api.ContainerExecAttach(bg, exec.ID, container.ExecStartOptions{
+	response, err := client.api.ContainerExecAttach(ctx, exec.ID, container.ExecStartOptions{
 		Tty:    true,
 		Detach: false,
 	})
-	if attachErr != nil {
-		clog.Errorf("Failed to extract command exec logs: %v", attachErr)
+	if err != nil {
+		clog.Errorf("Failed to execute lifecycle command: %v", err)
+		return false, err
 	}
+	defer response.Close()
 
-	// Run the exec
-	execStartCheck := container.ExecStartOptions{Detach: false, Tty: true}
-	err = client.api.ContainerExecStart(bg, exec.ID, execStartCheck)
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		select {
+		case <-ctx.Done():
+			response.Close()
+		case <-done:
+		}
+	}()
+
+	outputBytes, err := io.ReadAll(io.LimitReader(response.Reader, maxHookOutput+1))
 	if err != nil {
 		return false, err
 	}
-
-	var output string
-	if attachErr == nil {
-		defer response.Close()
-		var writer bytes.Buffer
-		written, err := writer.ReadFrom(response.Reader)
-		if err != nil {
-			clog.Error(err)
-		} else if written > 0 {
-			output = strings.TrimSpace(writer.String())
+	if len(outputBytes) > maxHookOutput {
+		outputBytes = outputBytes[:maxHookOutput]
+		clog.Warnf("Lifecycle command output exceeded %d bytes and was truncated", maxHookOutput)
+		if _, err := io.Copy(io.Discard, response.Reader); err != nil {
+			return false, err
 		}
 	}
+	output := strings.TrimSpace(string(outputBytes))
 
 	// Inspect the exec to get the exit code and print a message if the
 	// exit code is not success.
-	skipUpdate, err := client.waitForExecOrTimeout(bg, exec.ID, output, timeout)
+	skipUpdate, err := client.waitForExecOrTimeout(ctx, exec.ID, output, 0)
 	if err != nil {
 		return true, err
 	}

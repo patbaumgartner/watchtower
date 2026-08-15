@@ -1,0 +1,20 @@
+# Keep the build context to what the Go build actually needs.
+.git
+.github
+docs
+grafana
+prometheus
+scripts
+tplprev
+*.md
+!LICENSE.md
+mkdocs.yml
+docs-requirements.txt
+docker-compose.yml
+goreleaser.yml
+.goreleaser.yaml
+dockerfiles
+watchtower
+watchtower.exe
+coverage.out
+dist

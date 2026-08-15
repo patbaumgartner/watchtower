@@ -2,12 +2,22 @@
 
 ## Supported Versions
 
-Security updates will always only be applied to the latest version of Watchtower.
-As the software by default is set to auto-update if you use the `latest` tag, you will get these security updates automatically as soon as they are released.
+Security updates are only applied to the latest release. Because the `latest` tag is what most deployments track,
+and watchtower updates itself, those fixes reach you on the next update cycle.
 
 ## Reporting a Vulnerability
 
-Critical vulnerabilities that might open up for external attacks are best reported directly either to simme@arcticbit.se or nils@piksel.se.
-We'll always try to get back to you as swiftly as possible, but keep in mind that since this is a community project, we can't really leave any guarantees about the speed.
+Report vulnerabilities privately through GitHub:
+[**open a security advisory**](https://github.com/patbaumgartner/watchtower/security/advisories/new).
+That channel is private until an advisory is published, so please use it rather than a public issue or discussion.
 
-Non-critical vulnerabilities may be reported as regular GitHub issues.
+Please include the watchtower version, the platform, and the smallest reproduction you have.
+
+This is a best-effort community fork maintained in spare time, so no response-time guarantee is offered. Expect an
+acknowledgement within a week; if you have not heard back by then, feel free to ping the advisory thread.
+
+## Scope
+
+Watchtower requires access to the Docker socket, which is equivalent to root on the host. Findings that amount to
+"a process with the Docker socket can control the host" are inherent to the design and out of scope. Findings that
+let a *remote* party — a registry, a notification endpoint, or an HTTP API client — influence watchtower are in scope.

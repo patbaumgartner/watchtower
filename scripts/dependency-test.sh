@@ -5,6 +5,7 @@
 
 set -e
 SCRIPT_ROOT=$(dirname "$(readlink -m "$(type -p "$0")")")
+# shellcheck source=scripts/docker-util.sh
 source "$SCRIPT_ROOT/docker-util.sh"
 
 DepArgs=""
@@ -16,9 +17,9 @@ else
   DepArgs=$1
 fi
 
-WatchArgs="${*:2}"
-if [ -z "$WatchArgs" ]; then
-  WatchArgs="--debug"
+WatchArgs=("${@:2}")
+if [ ${#WatchArgs[@]} -eq 0 ]; then
+  WatchArgs=("--debug")
 fi
 
 try-remove-container parent
@@ -61,9 +62,9 @@ if [ -z "$WATCHTOWER_TAG" ]; then
   ## Windows support:
   #export DOCKER_HOST=tcp://localhost:2375
   #export CLICOLOR=1
-  go run . --run-once $WatchArgs
+  go run . --run-once "${WatchArgs[@]}"
 else
-  docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock patbaumgartner/watchtower:"$WATCHTOWER_TAG" --run-once $WatchArgs
+  docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock patbaumgartner/watchtower:"$WATCHTOWER_TAG" --run-once "${WatchArgs[@]}"
 fi
 
 echo -e "\nSession results:"
