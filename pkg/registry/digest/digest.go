@@ -1,7 +1,6 @@
 package digest
 
 import (
-	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -20,6 +19,24 @@ import (
 
 // ContentDigestHeader is the key for the key-value pair containing the digest header
 const ContentDigestHeader = "Docker-Content-Digest"
+
+// digestClient is shared so that registry connections are pooled across containers.
+var digestClient = &http.Client{
+	Timeout: 30 * time.Second,
+	Transport: &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: 20 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	},
+}
 
 // CompareDigest ...
 func CompareDigest(container types.Container, registryAuth string) (bool, error) {
@@ -76,31 +93,15 @@ func TransformAuth(registryAuth string) string {
 
 // GetDigest from registry using a HEAD request to prevent rate limiting
 func GetDigest(url string, token string) (string, error) {
-	tr := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		DialContext: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).DialContext,
-		ForceAttemptHTTP2:     true,
-		MaxIdleConns:          100,
-		IdleConnTimeout:       90 * time.Second,
-		TLSHandshakeTimeout:   10 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
-
-	req, _ := http.NewRequest("HEAD", url, nil)
-	req.Header.Set("User-Agent", meta.UserAgent)
-
 	if token == "" {
 		return "", errors.New("could not fetch token")
 	}
 
-	// CREDENTIAL: Uncomment to log the request token
-	// logrus.WithField("token", token).Trace("Setting request token")
-
+	req, err := http.NewRequest(http.MethodHead, url, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", meta.UserAgent)
 	req.Header.Add("Authorization", token)
 	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
 	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.list.v2+json")
@@ -109,13 +110,13 @@ func GetDigest(url string, token string) (string, error) {
 
 	logrus.WithField("url", url).Debug("Doing a HEAD request to fetch a digest")
 
-	res, err := client.Do(req)
+	res, err := digestClient.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode != 200 {
+	if res.StatusCode != http.StatusOK {
 		wwwAuthHeader := res.Header.Get("www-authenticate")
 		if wwwAuthHeader == "" {
 			wwwAuthHeader = "not present"

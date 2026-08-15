@@ -128,6 +128,22 @@ var _ = Describe("the auth module", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res).NotTo(BeNil())
 		})
+		It("should not crash when the realm is not a parsable URL", func() {
+			input := "bearer realm=\"ht\ttp://ghcr.io/token\",service=\"ghcr.io\""
+			imageRef, err := ref.ParseNormalizedNamed("patbaumgartner/watchtower")
+			Expect(err).NotTo(HaveOccurred())
+			res, err := auth.GetAuthURL(input, imageRef)
+			Expect(err).To(HaveOccurred())
+			Expect(res).To(BeNil())
+		})
+		It("should reject a realm that is not an absolute URL", func() {
+			input := `bearer realm="/token",service="ghcr.io"`
+			imageRef, err := ref.ParseNormalizedNamed("patbaumgartner/watchtower")
+			Expect(err).NotTo(HaveOccurred())
+			res, err := auth.GetAuthURL(input, imageRef)
+			Expect(err).To(HaveOccurred())
+			Expect(res).To(BeNil())
+		})
 	})
 
 	Describe("GetChallengeURL", func() {

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	ref "github.com/distribution/reference"
 	"github.com/patbaumgartner/watchtower/pkg/registry/helpers"
@@ -17,6 +18,12 @@ import (
 
 // ChallengeHeader is the HTTP Header containing challenge instructions
 const ChallengeHeader = "WWW-Authenticate"
+
+// maxTokenResponseBytes bounds the registry token response so a hostile or faulty
+// registry cannot exhaust memory.
+const maxTokenResponseBytes = 1 << 20
+
+var authClient = &http.Client{Timeout: 30 * time.Second}
 
 // GetToken fetches a token for the registry hosting the provided image
 func GetToken(container types.Container, registryAuth string) (string, error) {
@@ -33,9 +40,8 @@ func GetToken(container types.Container, registryAuth string) (string, error) {
 		return "", err
 	}
 
-	client := &http.Client{}
 	var res *http.Response
-	if res, err = client.Do(req); err != nil {
+	if res, err = authClient.Do(req); err != nil {
 		return "", err
 	}
 	defer res.Body.Close()
@@ -74,7 +80,6 @@ func GetChallengeRequest(URL url.URL) (*http.Request, error) {
 
 // GetBearerHeader tries to fetch a bearer token from the registry based on the challenge instructions
 func GetBearerHeader(challenge string, imageRef ref.Named, registryAuth string) (string, error) {
-	client := http.Client{}
 	authURL, err := GetAuthURL(challenge, imageRef)
 
 	if err != nil {
@@ -96,19 +101,27 @@ func GetBearerHeader(challenge string, imageRef ref.Named, registryAuth string) 
 	}
 
 	var authResponse *http.Response
-	if authResponse, err = client.Do(r); err != nil {
+	if authResponse, err = authClient.Do(r); err != nil {
 		return "", err
 	}
+	defer authResponse.Body.Close()
 
-	body, _ := io.ReadAll(authResponse.Body)
-	tokenResponse := &types.TokenResponse{}
-
-	err = json.Unmarshal(body, tokenResponse)
+	body, err := io.ReadAll(io.LimitReader(authResponse.Body, maxTokenResponseBytes))
 	if err != nil {
+		return "", fmt.Errorf("failed to read token response: %w", err)
+	}
+
+	tokenResponse := &types.TokenResponse{}
+	if err := json.Unmarshal(body, tokenResponse); err != nil {
 		return "", err
 	}
 
-	return fmt.Sprintf("Bearer %s", tokenResponse.Token), nil
+	token := tokenResponse.BearerToken()
+	if token == "" {
+		return "", errors.New("registry returned an empty token")
+	}
+
+	return fmt.Sprintf("Bearer %s", token), nil
 }
 
 // GetAuthURL from the instructions in the challenge
@@ -134,7 +147,14 @@ func GetAuthURL(challenge string, imageRef ref.Named) (*url.URL, error) {
 		return nil, fmt.Errorf("challenge header did not include all values needed to construct an auth url")
 	}
 
-	authURL, _ := url.Parse(values["realm"])
+	authURL, err := url.Parse(values["realm"])
+	if err != nil {
+		return nil, fmt.Errorf("challenge header contained an unparsable realm: %w", err)
+	}
+	if authURL.Host == "" {
+		return nil, errors.New("challenge header realm is not an absolute URL")
+	}
+
 	q := authURL.Query()
 	q.Add("service", values["service"])
 
