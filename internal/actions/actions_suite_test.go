@@ -6,12 +6,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/containrrr/watchtower/internal/actions"
-	"github.com/containrrr/watchtower/pkg/types"
+	"github.com/patbaumgartner/watchtower/internal/actions"
+	"github.com/patbaumgartner/watchtower/pkg/types"
 
-	. "github.com/containrrr/watchtower/internal/actions/mocks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/patbaumgartner/watchtower/internal/actions/mocks"
 )
 
 func TestActions(t *testing.T) {

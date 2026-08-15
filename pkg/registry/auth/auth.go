@@ -9,9 +9,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/containrrr/watchtower/pkg/registry/helpers"
-	"github.com/containrrr/watchtower/pkg/types"
 	ref "github.com/distribution/reference"
+	"github.com/patbaumgartner/watchtower/pkg/registry/helpers"
+	"github.com/patbaumgartner/watchtower/pkg/types"
 	"github.com/sirupsen/logrus"
 )
 

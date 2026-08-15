@@ -1,4 +1,4 @@
-module github.com/containrrr/watchtower
+module github.com/patbaumgartner/watchtower
 
 go 1.20
 

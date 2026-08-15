@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	t "github.com/containrrr/watchtower/pkg/types"
+	t "github.com/patbaumgartner/watchtower/pkg/types"
 )
 
 type imageRef struct {

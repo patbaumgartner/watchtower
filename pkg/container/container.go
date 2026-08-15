@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/containrrr/watchtower/internal/util"
-	wt "github.com/containrrr/watchtower/pkg/types"
+	"github.com/patbaumgartner/watchtower/internal/util"
+	wt "github.com/patbaumgartner/watchtower/pkg/types"
 	"github.com/sirupsen/logrus"
 
 	"github.com/docker/docker/api/types"
