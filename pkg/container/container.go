@@ -11,14 +11,16 @@ import (
 	wt "github.com/patbaumgartner/watchtower/pkg/types"
 	"github.com/sirupsen/logrus"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+
 	dockercontainer "github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/go-connections/nat"
 )
 
 // NewContainer returns a new Container instance instantiated with the
 // specified ContainerInfo and ImageInfo structs.
-func NewContainer(containerInfo *types.ContainerJSON, imageInfo *types.ImageInspect) *Container {
+func NewContainer(containerInfo *container.InspectResponse, imageInfo *image.InspectResponse) *Container {
 	return &Container{
 		containerInfo: containerInfo,
 		imageInfo:     imageInfo,
@@ -30,8 +32,8 @@ type Container struct {
 	LinkedToRestarting bool
 	Stale              bool
 
-	containerInfo *types.ContainerJSON
-	imageInfo     *types.ImageInspect
+	containerInfo *container.InspectResponse
+	imageInfo     *image.InspectResponse
 }
 
 // IsLinkedToRestarting returns the current value of the LinkedToRestarting field for the container
@@ -55,7 +57,7 @@ func (c *Container) SetStale(value bool) {
 }
 
 // ContainerInfo fetches JSON info for the container
-func (c Container) ContainerInfo() *types.ContainerJSON {
+func (c Container) ContainerInfo() *container.InspectResponse {
 	return c.containerInfo
 }
 
@@ -335,7 +337,7 @@ func (c Container) GetCreateConfig() *dockercontainer.Config {
 
 	// subtract ports exposed in image from container
 	for k := range config.ExposedPorts {
-		if _, ok := imageConfig.ExposedPorts[k]; ok {
+		if _, ok := imageConfig.ExposedPorts[string(k)]; ok {
 			delete(config.ExposedPorts, k)
 		}
 	}
@@ -368,7 +370,7 @@ func (c Container) HasImageInfo() bool {
 }
 
 // ImageInfo fetches the ImageInspect data of the current container
-func (c Container) ImageInfo() *types.ImageInspect {
+func (c Container) ImageInfo() *image.InspectResponse {
 	return c.imageInfo
 }
 
