@@ -1,13 +1,24 @@
+# Build output
 watchtower
 watchtower.exe
-vendor
-.glide
-dist
-.idea
-.DS_Store
-/site
+dist/
+oryxBuildBinary
+
+# Test and coverage output
 coverage.out
 *.coverprofile
 
+# Dependency and tooling caches
+vendor/
+.glide
+
+# Documentation build output
+/site
 docs/assets/wasm_exec.js
 docs/assets/*.wasm
+
+# Editor and OS metadata
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
