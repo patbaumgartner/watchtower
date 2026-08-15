@@ -5,7 +5,7 @@
 #
 #   docker buildx build --platform linux/amd64,linux/arm64 -f dockerfiles/Dockerfile .
 
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine@sha256:70b46548e42db77e0966aaf3619fd068734dc6c77584d526b91126504fd95816 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26.6-alpine@sha256:af8d6740070b8906d12eae1c3e3ea0957fb63f492051ea05e354c38ef9fe88df AS builder
 
 ARG VERSION=dev
 ARG TARGETOS

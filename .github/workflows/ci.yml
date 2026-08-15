@@ -15,8 +15,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  # Minor version only, so security patch releases are picked up automatically.
-  GO_VERSION: '1.26'
+  GO_VERSION: '1.26.6'
 
 jobs:
   lint:

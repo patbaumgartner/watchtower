@@ -19,7 +19,7 @@ This is the first release line of `patbaumgartner/watchtower`, a maintained fork
 - Per-architecture image tags (`amd64-*`, `arm64v8-*`, `armhf-*`, `i386-*`) are gone. Every tag is now a
   multi-architecture manifest covering `linux/amd64`, `linux/arm64`, `linux/arm/v7`, and `linux/386`; pull the
   plain tag and the runtime picks the right build.
-- Building from source now requires Go 1.26 or newer.
+- Building from source now requires Go 1.26.6 or newer.
 - `dockerfiles/Dockerfile.self-contained` and `dockerfiles/Dockerfile.dev-self-contained` were removed.
   `dockerfiles/Dockerfile` cross-compiles for any platform buildx is given.
 
@@ -46,7 +46,7 @@ This is the first release line of `patbaumgartner/watchtower`, a maintained fork
 
 ### Changed
 
-- Upgraded to Go 1.26 and the Docker SDK v28.
+- Upgraded to Go 1.26.6 and the Docker SDK v28.
 - CI runs format, vet, staticcheck, shellcheck, a strict docs build, a govulncheck gate, a race-enabled test
   matrix on Linux/macOS/Windows, CodeQL, and a multi-architecture image build.
 - Release automation replaced with Buildx and GoReleaser v2; images carry SBOMs and build provenance attestations.
