@@ -2,7 +2,6 @@
 watchtower
 watchtower.exe
 dist/
-oryxBuildBinary
 
 # Test and coverage output
 coverage.out
@@ -10,7 +9,7 @@ coverage.out
 
 # Dependency and tooling caches
 vendor/
-.glide
+.venv/
 
 # Documentation build output
 /site

@@ -67,7 +67,6 @@ var _ = Describe("the metrics API", func() {
 		}
 
 		metrics.RegisterScan(metric)
-		Eventually(metrics.Default().QueueIsEmpty).Should(BeTrue())
 
 		Eventually(tryGetMetrics).Should(SatisfyAll(
 			HaveKeyWithValue("watchtower_containers_updated", "3"),
@@ -80,7 +79,6 @@ var _ = Describe("the metrics API", func() {
 		for i := 0; i < 3; i++ {
 			metrics.RegisterScan(nil)
 		}
-		Eventually(metrics.Default().QueueIsEmpty).Should(BeTrue())
 
 		Eventually(tryGetMetrics).Should(SatisfyAll(
 			HaveKeyWithValue("watchtower_scans_total", "4"),

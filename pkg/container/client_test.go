@@ -7,7 +7,6 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"time"
 
-	"github.com/patbaumgartner/watchtower/internal/util"
 	"github.com/patbaumgartner/watchtower/pkg/container/mocks"
 	"github.com/patbaumgartner/watchtower/pkg/filters"
 	t "github.com/patbaumgartner/watchtower/pkg/types"
@@ -113,8 +112,8 @@ var _ = Describe("the client", func() {
 	When("removing a image", func() {
 		When("debug logging is enabled", func() {
 			It("should log removed and untagged images", func() {
-				imageA := util.GenerateRandomSHA256()
-				imageAParent := util.GenerateRandomSHA256()
+				imageA := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+				imageAParent := "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 				images := map[string][]string{imageA: {imageAParent}}
 				mockServer.AppendHandlers(mocks.RemoveImageHandler(images))
 				c := dockerClient{api: docker}
@@ -132,7 +131,7 @@ var _ = Describe("the client", func() {
 		})
 		When("image is not found", func() {
 			It("should return an error", func() {
-				image := util.GenerateRandomSHA256()
+				image := "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 				mockServer.AppendHandlers(mocks.RemoveImageHandler(nil))
 				c := dockerClient{api: docker}
 

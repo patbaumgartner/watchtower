@@ -2,16 +2,12 @@
 .git
 .github
 docs
-grafana
-prometheus
 scripts
 tplprev
 *.md
 !LICENSE.md
 mkdocs.yml
 docs-requirements.txt
-docker-compose.yml
-goreleaser.yml
 .goreleaser.yaml
 dockerfiles
 watchtower

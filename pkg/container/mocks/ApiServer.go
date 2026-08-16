@@ -174,11 +174,6 @@ func GetContainerHandler(containerID string, containerInfo *dockerContainer.Insp
 	return getContainerHandler(containerID, responseHandler)
 }
 
-// GetImageHandler mocks the GET images/{id}/json endpoint
-func GetImageHandler(imageInfo *dockerImage.InspectResponse) http.HandlerFunc {
-	return getImageHandler(t.ImageID(imageInfo.ID), ghttp.RespondWithJSONEncoded(http.StatusOK, imageInfo))
-}
-
 // ListContainersHandler mocks the GET containers/json endpoint, filtering the returned containers based on statuses
 func ListContainersHandler(statuses ...string) http.HandlerFunc {
 	filterArgs := createFilterArgs(statuses)

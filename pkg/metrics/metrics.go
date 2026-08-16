@@ -35,13 +35,7 @@ func NewMetric(report types.Report) *Metric {
 	}
 }
 
-// QueueIsEmpty checks whether any messages are enqueued in the channel
-func (metrics *Metrics) QueueIsEmpty() bool {
-	return len(metrics.channel) == 0
-}
-
-// Register registers metrics for an executed scan
-func (metrics *Metrics) Register(metric *Metric) {
+func (metrics *Metrics) register(metric *Metric) {
 	metrics.channel <- metric
 }
 
@@ -75,7 +69,7 @@ func Default() *Metrics {
 		channel: make(chan *Metric, 10),
 	}
 
-	go metrics.HandleUpdate(metrics.channel)
+	go metrics.handleUpdate(metrics.channel)
 
 	return metrics
 }
@@ -83,11 +77,10 @@ func Default() *Metrics {
 // RegisterScan fetches a metric handler and enqueues a metric
 func RegisterScan(metric *Metric) {
 	metrics := Default()
-	metrics.Register(metric)
+	metrics.register(metric)
 }
 
-// HandleUpdate dequeue the metric channel and processes it
-func (metrics *Metrics) HandleUpdate(channel <-chan *Metric) {
+func (metrics *Metrics) handleUpdate(channel <-chan *Metric) {
 	for change := range channel {
 		if change == nil {
 			// Update was skipped and rescheduled
