@@ -45,21 +45,6 @@ updates:
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "docker"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "06:00"
-      timezone: "Europe/Zurich"
-    open-pull-requests-limit: 5
-    reviewers: ["patbaumgartner"]
-    assignees: ["patbaumgartner"]
-    commit-message:
-      prefix: "deps(docker)"
-      include: "scope"
-    labels: ["dependencies", "docker"]
-
-  - package-ecosystem: "docker"
     directory: "/dockerfiles"
     schedule:
       interval: "weekly"

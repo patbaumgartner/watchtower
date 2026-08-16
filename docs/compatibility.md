@@ -31,7 +31,7 @@ Legacy container-wide custom MAC addresses remain supported by API 1.25. Per-net
 | Docker build images and frontend | `dockerfiles/Dockerfile` | Digests make builds reproducible. | Dependabot updates the tag and digest together; retain the digest. |
 | Alpine package versions | `dockerfiles/Dockerfile` | The final certificate/timezone filesystem must be reproducible. | Update with the Alpine base digest and verify all target platforms build. |
 | GitHub Actions | `.github/workflows/` | Full commit SHAs prevent mutable action tags from changing CI code. | Dependabot updates SHAs; never replace them with floating labels. |
-| Demo and test containers | Compose files and test scripts | `tag@sha256` keeps build and monitoring fixtures reproducible while exposing a tag to Dependabot. | Dependabot updates Compose values. Update script digests deliberately. Do not remove digests. |
+| Demo and test containers | Compose files and test scripts | `tag@sha256` keeps build and monitoring fixtures reproducible. | Dependabot does not update Compose digests; review tags and digests manually. Do not remove digests. |
 
 ## Required compatibility checks
 
