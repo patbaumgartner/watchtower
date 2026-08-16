@@ -33,10 +33,3 @@ scrape_configs:
 ```
 
 Replace `demotoken` with the Bearer token you have set accordingly.
-
-## Demo
-
-The repository contains a demo with prometheus and grafana, available through `docker-compose.yml`. This demo
-is preconfigured with a dashboard, which will look something like this:
-
-![grafana metrics](assets/grafana-dashboard.png)

@@ -57,6 +57,7 @@ This is the first release line of `patbaumgartner/watchtower`, a maintained fork
   the pinned SDK maximum are preserved.
 - Removed obsolete Codacy, devbots, All Contributors generator, Codecov bootstrap, container-networking harness, and
   unused image metadata.
+- Removed the untested Grafana and Prometheus demo stack; the Prometheus-compatible metrics endpoint remains supported.
 - CI runs format, vet, staticcheck, shellcheck, a strict docs build, a govulncheck gate, a race-enabled test
   matrix on Linux/macOS/Windows, CodeQL, and a multi-architecture image build.
 - Release automation replaced with Buildx and GoReleaser v2; images carry SBOMs and build provenance attestations.
