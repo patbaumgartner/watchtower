@@ -6,6 +6,10 @@ All notable changes to this fork are documented here. This project follows
 
 ## [Unreleased]
 
+### Changed
+
+- Release descriptions are generated from the versioned changelog, git commits, and contributor metadata.
+
 ## [2.0.0] - 2026-08-16
 
 This is the first release line of `patbaumgartner/watchtower`, a maintained fork of
