@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"errors"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -51,6 +52,9 @@ func newEmailNotifier(c *cobra.Command) t.ConvertibleNotifier {
 }
 
 func (e *emailTypeNotifier) GetURL(c *cobra.Command) (string, error) {
+	if e.tlsSkipVerify {
+		return "", errors.New("notification-email-server-tls-skip-verify is unsafe and no longer supported; configure a trusted SMTP certificate")
+	}
 	conf := &shoutrrrSmtp.Config{
 		FromAddress: e.From,
 		FromName:    "Watchtower",
@@ -68,10 +72,6 @@ func (e *emailTypeNotifier) GetURL(c *cobra.Command) (string, error) {
 
 	if len(e.User) > 0 {
 		conf.Auth = shoutrrrSmtp.AuthTypes.Plain
-	}
-
-	if e.tlsSkipVerify {
-		conf.Encryption = shoutrrrSmtp.EncMethods.None
 	}
 
 	return conf.GetURL().String(), nil

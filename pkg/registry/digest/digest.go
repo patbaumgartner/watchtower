@@ -23,6 +23,12 @@ const ContentDigestHeader = "Docker-Content-Digest"
 // digestClient is shared so that registry connections are pooled across containers.
 var digestClient = &http.Client{
 	Timeout: 30 * time.Second,
+	CheckRedirect: func(req *http.Request, _ []*http.Request) error {
+		if req.URL.Scheme != "https" {
+			return errors.New("registry manifest redirect must use HTTPS")
+		}
+		return nil
+	},
 	Transport: &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{

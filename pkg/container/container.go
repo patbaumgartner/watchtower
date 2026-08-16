@@ -4,15 +4,18 @@ package container
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 
+	"github.com/patbaumgartner/watchtower/internal/dockercompat"
 	"github.com/patbaumgartner/watchtower/internal/util"
 	wt "github.com/patbaumgartner/watchtower/pkg/types"
 	"github.com/sirupsen/logrus"
 
 	dockercontainer "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/go-connections/nat"
 )
 
@@ -281,9 +284,15 @@ func (c Container) StopSignal() string {
 // started from. This function returns a ContainerConfig which contains just
 // the options overridden at runtime.
 func (c Container) GetCreateConfig() *dockercontainer.Config {
-	config := c.containerInfo.Config
+	config := *c.containerInfo.Config
 	hostConfig := c.containerInfo.HostConfig
 	imageConfig := c.imageInfo.Config
+	if config.Healthcheck != nil {
+		healthcheck := *config.Healthcheck
+		healthcheck.Test = append([]string(nil), config.Healthcheck.Test...)
+		config.Healthcheck = &healthcheck
+	}
+	config.ExposedPorts = maps.Clone(config.ExposedPorts)
 
 	if config.WorkingDir == imageConfig.WorkingDir {
 		config.WorkingDir = ""
@@ -325,11 +334,10 @@ func (c Container) GetCreateConfig() *dockercontainer.Config {
 		if config.Healthcheck.StartPeriod == imageConfig.Healthcheck.StartPeriod {
 			config.Healthcheck.StartPeriod = 0
 		}
-	}
 
-	// The client supports Docker API 1.25, while StartInterval requires 1.44.
-	if config.Healthcheck != nil {
-		config.Healthcheck.StartInterval = 0
+		if config.Healthcheck.StartInterval == imageConfig.Healthcheck.StartInterval {
+			config.Healthcheck.StartInterval = 0
+		}
 	}
 
 	config.Env = util.SliceSubtract(config.Env, imageConfig.Env)
@@ -339,6 +347,9 @@ func (c Container) GetCreateConfig() *dockercontainer.Config {
 	config.Volumes = util.StructMapSubtract(config.Volumes, imageConfig.Volumes)
 
 	// subtract ports exposed in image from container
+	if config.ExposedPorts == nil {
+		config.ExposedPorts = make(map[nat.Port]struct{})
+	}
 	for k := range config.ExposedPorts {
 		if _, ok := imageConfig.ExposedPorts[string(k)]; ok {
 			delete(config.ExposedPorts, k)
@@ -349,13 +360,14 @@ func (c Container) GetCreateConfig() *dockercontainer.Config {
 	}
 
 	config.Image = c.ImageName()
-	return config
+	return &config
 }
 
 // GetCreateHostConfig returns the container's current HostConfig with any links
 // re-written so that they can be re-submitted to the Docker create API.
 func (c Container) GetCreateHostConfig() *dockercontainer.HostConfig {
-	hostConfig := c.containerInfo.HostConfig
+	hostConfig := *c.containerInfo.HostConfig
+	hostConfig.Links = append([]string(nil), c.containerInfo.HostConfig.Links...)
 
 	for i, link := range hostConfig.Links {
 		name := link[0:strings.Index(link, ":")]
@@ -364,7 +376,7 @@ func (c Container) GetCreateHostConfig() *dockercontainer.HostConfig {
 		hostConfig.Links[i] = fmt.Sprintf("%s:%s", name, alias)
 	}
 
-	return hostConfig
+	return &hostConfig
 }
 
 // HasImageInfo returns whether image information could be retrieved for the container
@@ -398,11 +410,52 @@ func (c Container) VerifyConfiguration() error {
 	if hostConfig == nil {
 		return errorInvalidConfig
 	}
+	if containerConfig.Healthcheck != nil && containerConfig.Healthcheck.StartInterval != 0 && !dockercompat.Supports("1.44") {
+		return fmt.Errorf("container healthcheck uses a start interval, which requires Docker API 1.44 or later")
+	}
+	if hostConfig.KernelMemory != 0 && (dockercompat.Supports("1.42") || !dockercompat.Supports("1.40")) {
+		return fmt.Errorf("container configures kernel memory, which requires Docker API 1.40 or 1.41")
+	}
+	//lint:ignore SA1019 API 1.25 preflight must detect this field before Docker silently clears it.
+	if hostConfig.KernelMemoryTCP != 0 && !dockercompat.Supports("1.40") {
+		return fmt.Errorf("container configures TCP kernel memory, which requires Docker API 1.40 or later")
+	}
+	if hostConfig.ConsoleSize != [2]uint{} && !dockercompat.Supports("1.42") {
+		return fmt.Errorf("container configures console size, which requires Docker API 1.42 or later")
+	}
+	if len(hostConfig.Annotations) != 0 && !dockercompat.Supports("1.43") {
+		return fmt.Errorf("container configures annotations, which require Docker API 1.43 or later")
+	}
 
-	// Instead of returning an error here, we just create an empty map
-	// This should allow for updating containers where the exposed ports are missing
-	if len(hostConfig.PortBindings) > 0 && containerConfig.ExposedPorts == nil {
-		containerConfig.ExposedPorts = make(map[nat.Port]struct{})
+	for _, containerMount := range hostConfig.Mounts {
+		if containerMount.Type == mount.TypeBind && containerMount.ReadOnly && !dockercompat.Supports("1.44") &&
+			(containerMount.BindOptions == nil || !containerMount.BindOptions.ReadOnlyNonRecursive) {
+			return fmt.Errorf("container mount %q requires recursive read-only semantics, which require Docker API 1.44 or later", containerMount.Target)
+		}
+		if containerMount.BindOptions != nil {
+			if containerMount.BindOptions.NonRecursive && !dockercompat.Supports("1.40") {
+				return fmt.Errorf("container mount %q uses bind-recursive=disabled, which requires Docker API 1.40 or later", containerMount.Target)
+			}
+			if containerMount.BindOptions.CreateMountpoint && !dockercompat.Supports("1.42") {
+				return fmt.Errorf("container mount %q uses bind create-mountpoint, which requires Docker API 1.42 or later", containerMount.Target)
+			}
+			if containerMount.BindOptions.ReadOnlyForceRecursive && !dockercompat.Supports("1.44") {
+				return fmt.Errorf("container mount %q uses bind-recursive=readonly, which requires Docker API 1.44 or later", containerMount.Target)
+			}
+		}
+		if containerMount.VolumeOptions != nil && containerMount.VolumeOptions.Subpath != "" && !dockercompat.Supports("1.45") {
+			return fmt.Errorf("container mount %q uses a volume subpath, which requires Docker API 1.45 or later", containerMount.Target)
+		}
+		if containerMount.Type == mount.TypeImage && !dockercompat.Supports("1.48") {
+			return fmt.Errorf("container mount %q uses an image mount, which requires Docker API 1.48 or later", containerMount.Target)
+		}
+	}
+	if containerInfo.NetworkSettings != nil && !dockercompat.Supports("1.48") {
+		for name, endpoint := range containerInfo.NetworkSettings.Networks {
+			if endpoint != nil && endpoint.GwPriority != 0 {
+				return fmt.Errorf("container network %q configures gateway priority, which requires Docker API 1.48 or later", name)
+			}
+		}
 	}
 
 	return nil

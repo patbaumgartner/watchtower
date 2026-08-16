@@ -14,9 +14,12 @@ import (
 )
 
 func TestEnvConfig_Defaults(t *testing.T) {
+	viper.Reset()
+	t.Cleanup(viper.Reset)
 	// Unset testing environments own variables, since those are not what is under test
 	_ = os.Unsetenv("DOCKER_TLS_VERIFY")
 	_ = os.Unsetenv("DOCKER_HOST")
+	_ = os.Unsetenv("DOCKER_API_VERSION")
 
 	cmd := new(cobra.Command)
 	SetDefaults()
@@ -27,16 +30,17 @@ func TestEnvConfig_Defaults(t *testing.T) {
 
 	assert.Equal(t, "unix:///var/run/docker.sock", os.Getenv("DOCKER_HOST"))
 	assert.Equal(t, "", os.Getenv("DOCKER_TLS_VERIFY"))
-	// Re-enable this test when we've moved to github actions.
-	// assert.Equal(t, DockerAPIMinVersion, os.Getenv("DOCKER_API_VERSION"))
+	assert.Equal(t, DockerAPIMinVersion, os.Getenv("DOCKER_API_VERSION"))
 }
 
 func TestEnvConfig_Custom(t *testing.T) {
+	viper.Reset()
+	t.Cleanup(viper.Reset)
 	cmd := new(cobra.Command)
 	SetDefaults()
 	RegisterDockerFlags(cmd)
 
-	err := cmd.ParseFlags([]string{"--host", "some-custom-docker-host", "--tlsverify", "--api-version", "1.99"})
+	err := cmd.ParseFlags([]string{"--host", "some-custom-docker-host", "--tlsverify", "--api-version", "1.44"})
 	require.NoError(t, err)
 
 	err = EnvConfig(cmd)
@@ -44,8 +48,21 @@ func TestEnvConfig_Custom(t *testing.T) {
 
 	assert.Equal(t, "some-custom-docker-host", os.Getenv("DOCKER_HOST"))
 	assert.Equal(t, "1", os.Getenv("DOCKER_TLS_VERIFY"))
-	// Re-enable this test when we've moved to github actions.
-	// assert.Equal(t, "1.99", os.Getenv("DOCKER_API_VERSION"))
+	assert.Equal(t, "1.44", os.Getenv("DOCKER_API_VERSION"))
+}
+
+func TestEnvConfig_InvalidAPIVersion(t *testing.T) {
+	for _, version := range []string{"1.24", "1.52", "latest"} {
+		t.Run(version, func(t *testing.T) {
+			viper.Reset()
+			t.Cleanup(viper.Reset)
+			cmd := new(cobra.Command)
+			SetDefaults()
+			RegisterDockerFlags(cmd)
+			require.NoError(t, cmd.ParseFlags([]string{"--api-version", version}))
+			assert.Error(t, EnvConfig(cmd))
+		})
+	}
 }
 
 func TestGetSecretsFromFilesWithString(t *testing.T) {

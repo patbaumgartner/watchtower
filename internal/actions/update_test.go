@@ -5,6 +5,7 @@ import (
 
 	dockerContainer "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/go-connections/nat"
 	"github.com/patbaumgartner/watchtower/internal/actions"
 	"github.com/patbaumgartner/watchtower/pkg/types"
@@ -110,15 +111,52 @@ var _ = Describe("the update action", func() {
 			})
 		})
 		When("updating a linked container with missing image info", func() {
-			It("should gracefully fail", func() {
+			It("should skip the restart set before stopping containers", func() {
 				client := CreateMockClient(getLinkedTestData(false), false, false)
 
 				report, err := actions.Update(client, types.UpdateParams{})
 				Expect(err).NotTo(HaveOccurred())
-				// Note: Linked containers that were skipped for recreation is not counted in Failed
-				// If this happens, an error is emitted to the logs, so a notification should still be sent.
-				Expect(report.Updated()).To(HaveLen(1))
-				Expect(report.Fresh()).To(HaveLen(1))
+				Expect(client.TestData.TriedToStopCount).To(BeZero())
+				Expect(client.TestData.TriedToStartCount).To(BeZero())
+				Expect(report.Skipped()).To(HaveLen(1))
+			})
+		})
+		When("a dependency-restarted container uses configuration unsupported by Docker API 1.25", func() {
+			It("should not stop any container in the update set", func() {
+				testData := getLinkedTestData(true)
+				linked := testData.Containers[1]
+				linked.ContainerInfo().HostConfig.Mounts = []mount.Mount{{
+					Type:        mount.TypeBind,
+					Target:      "/data",
+					BindOptions: &mount.BindOptions{ReadOnlyForceRecursive: true},
+				}}
+				client := CreateMockClient(testData, false, false)
+
+				report, err := actions.Update(client, types.UpdateParams{})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(client.TestData.TriedToStopCount).To(BeZero())
+				Expect(client.TestData.TriedToStartCount).To(BeZero())
+				Expect(report.Skipped()).To(HaveLen(1))
+			})
+			It("should still run the post-check hook when preflight aborts", func() {
+				testData := getLinkedTestData(true)
+				testData.Containers[0].ContainerInfo().Config.Labels["com.centurylinklabs.watchtower.lifecycle.pre-check"] = "/PreUpdateReturn0.sh"
+				testData.Containers[0].ContainerInfo().Config.Labels["com.centurylinklabs.watchtower.lifecycle.post-check"] = "/PostCheck.sh"
+				testData.Containers[1].ContainerInfo().HostConfig.Mounts = []mount.Mount{{
+					Type:        mount.TypeBind,
+					Target:      "/data",
+					BindOptions: &mount.BindOptions{ReadOnlyForceRecursive: true},
+				}}
+				client := CreateMockClient(testData, false, false)
+				Expect(testData.Containers[0].GetLifecyclePostCheckCommand()).To(Equal("/PostCheck.sh"))
+
+				_, err := actions.Update(client, types.UpdateParams{LifecycleHooks: true})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(testData.Containers[0].GetLifecyclePostCheckCommand()).To(Equal("/PostCheck.sh"))
+				Expect(client.TestData.ExecutedCommands).To(ContainElement("/PreUpdateReturn0.sh"))
+				Expect(client.TestData.ExecutedCommands).To(ContainElement("/PostCheck.sh"))
 			})
 		})
 	})
@@ -155,6 +193,27 @@ var _ = Describe("the update action", func() {
 				_, err := actions.Update(client, types.UpdateParams{Cleanup: true})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(client.TestData.TriedToRemoveImageCount).To(Equal(1))
+			})
+			It("should not let an incompatible monitor-only container block eligible updates", func() {
+				testData := &TestData{
+					Containers: []types.Container{
+						CreateMockContainer("eligible", "eligible", "eligible:latest", time.Now()),
+						CreateMockContainerWithConfig(
+							"monitor-only", "monitor-only", "monitor-only:latest", false, false, time.Now(),
+							&dockerContainer.Config{Labels: map[string]string{"com.centurylinklabs.watchtower.monitor-only": "true"}},
+						),
+					},
+				}
+				testData.Containers[1].ContainerInfo().HostConfig.Mounts = []mount.Mount{{
+					Type: mount.TypeImage, Target: "/data",
+				}}
+				client := CreateMockClient(testData, false, false)
+
+				_, err := actions.Update(client, types.UpdateParams{})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(client.TestData.TriedToStopCount).To(Equal(1))
+				Expect(client.TestData.TriedToStartCount).To(Equal(1))
 			})
 		})
 

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/patbaumgartner/watchtower/internal/dockercompat"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -17,7 +18,7 @@ import (
 
 // DockerAPIMinVersion is the minimum version of the docker api required to
 // use watchtower
-const DockerAPIMinVersion string = "1.25"
+const DockerAPIMinVersion string = dockercompat.DefaultAPIVersion
 
 var defaultInterval = int((time.Hour * 24).Seconds())
 
@@ -274,8 +275,7 @@ func RegisterNotificationFlags(rootCmd *cobra.Command) {
 		"notification-email-server-tls-skip-verify",
 		"",
 		envBool("WATCHTOWER_NOTIFICATION_EMAIL_SERVER_TLS_SKIP_VERIFY"),
-		`Controls whether watchtower verifies the SMTP server's certificate chain and host name.
-Should only be used for testing.`)
+		`Deprecated: insecure SMTP certificate bypass is no longer supported.`)
 
 	flags.StringP(
 		"notification-email-server-user",
@@ -430,6 +430,7 @@ func SetDefaults() {
 	viper.SetDefault("WATCHTOWER_NOTIFICATION_SLACK_IDENTIFIER", "watchtower")
 	viper.SetDefault("WATCHTOWER_LOG_LEVEL", "info")
 	viper.SetDefault("WATCHTOWER_LOG_FORMAT", "auto")
+	viper.SetDefault("WATCHTOWER_WARN_ON_HEAD_FAILURE", "auto")
 }
 
 // EnvConfig translates the command-line options into environment variables
@@ -449,6 +450,9 @@ func EnvConfig(cmd *cobra.Command) error {
 		return err
 	}
 	if version, err = flags.GetString("api-version"); err != nil {
+		return err
+	}
+	if err = dockercompat.Validate(version); err != nil {
 		return err
 	}
 	if err = setEnvOptStr("DOCKER_HOST", host); err != nil {

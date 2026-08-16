@@ -60,16 +60,16 @@ func GetToken(container types.Container, registryAuth string) (string, error) {
 		"header": v,
 	}).Debug("Got response to challenge request")
 
-	challenge := strings.ToLower(v)
-	if strings.HasPrefix(challenge, "basic") {
+	scheme, _, _ := strings.Cut(strings.TrimSpace(v), " ")
+	switch strings.ToLower(scheme) {
+	case "basic":
 		if registryAuth == "" {
 			return "", fmt.Errorf("no credentials available")
 		}
 
 		return fmt.Sprintf("Basic %s", registryAuth), nil
-	}
-	if strings.HasPrefix(challenge, "bearer") {
-		return GetBearerHeader(challenge, normalizedRef, registryAuth)
+	case "bearer":
+		return GetBearerHeader(v, normalizedRef, registryAuth)
 	}
 
 	return "", errors.New("unsupported challenge type from registry")
@@ -134,8 +134,10 @@ func GetBearerHeader(challenge string, imageRef ref.Named, registryAuth string) 
 
 // GetAuthURL from the instructions in the challenge
 func GetAuthURL(challenge string, imageRef ref.Named) (*url.URL, error) {
-	loweredChallenge := strings.ToLower(challenge)
-	raw := strings.TrimPrefix(loweredChallenge, "bearer")
+	scheme, raw, found := strings.Cut(strings.TrimSpace(challenge), " ")
+	if !found || !strings.EqualFold(scheme, "bearer") {
+		return nil, errors.New("challenge header is not a bearer challenge")
+	}
 
 	pairs := strings.Split(raw, ",")
 	values := make(map[string]string, len(pairs))
@@ -143,7 +145,7 @@ func GetAuthURL(challenge string, imageRef ref.Named) (*url.URL, error) {
 	for _, pair := range pairs {
 		trimmed := strings.Trim(pair, " ")
 		if key, val, ok := strings.Cut(trimmed, "="); ok {
-			values[key] = strings.Trim(val, `"`)
+			values[strings.ToLower(strings.TrimSpace(key))] = strings.TrimSpace(strings.Trim(val, `"`))
 		}
 	}
 	logrus.WithFields(logrus.Fields{

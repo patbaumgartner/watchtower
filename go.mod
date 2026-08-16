@@ -6,6 +6,8 @@ require (
 github.com/containerd/errdefs v1.0.0
 github.com/containrrr/shoutrrr v0.8.0
 github.com/distribution/reference v0.6.0
+// Keep Docker SDK/CLI on v28: the split v29+ Moby client requires API 1.40,
+// but Synology support requires API 1.25.
 github.com/docker/cli v28.5.2+incompatible
 github.com/docker/docker v28.5.2+incompatible
 github.com/docker/go-connections v0.8.1

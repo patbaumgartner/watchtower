@@ -47,7 +47,7 @@ type dependencySorter struct {
 }
 
 func (ds *dependencySorter) Sort(containers []types.Container) ([]types.Container, error) {
-	ds.unvisited = containers
+	ds.unvisited = append([]types.Container(nil), containers...)
 	ds.marked = map[string]bool{}
 
 	for len(ds.unvisited) > 0 {

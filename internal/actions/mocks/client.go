@@ -18,6 +18,9 @@ type MockClient struct {
 // TestData is the data used to perform the test
 type TestData struct {
 	TriedToRemoveImageCount int
+	TriedToStartCount       int
+	TriedToStopCount        int
+	ExecutedCommands        []string
 	NameOfContainerToKeep   string
 	Containers              []t.Container
 	Staleness               map[string]bool
@@ -44,6 +47,7 @@ func (client MockClient) ListContainers(_ t.Filter) ([]t.Container, error) {
 
 // StopContainer is a mock method
 func (client MockClient) StopContainer(c t.Container, _ time.Duration) error {
+	client.TestData.TriedToStopCount++
 	if c.Name() == client.TestData.NameOfContainerToKeep {
 		return errors.New("tried to stop the instance we want to keep")
 	}
@@ -52,6 +56,7 @@ func (client MockClient) StopContainer(c t.Container, _ time.Duration) error {
 
 // StartContainer is a mock method
 func (client MockClient) StartContainer(_ t.Container) (t.ContainerID, error) {
+	client.TestData.TriedToStartCount++
 	return "", nil
 }
 
@@ -73,6 +78,7 @@ func (client MockClient) GetContainer(_ t.ContainerID) (t.Container, error) {
 
 // ExecuteCommand is a mock method
 func (client MockClient) ExecuteCommand(_ t.ContainerID, command string, _ int) (SkipUpdate bool, err error) {
+	client.TestData.ExecutedCommands = append(client.TestData.ExecutedCommands, command)
 	switch command {
 	case "/PreUpdateReturn0.sh":
 		return false, nil

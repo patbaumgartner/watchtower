@@ -81,6 +81,17 @@ var _ = Describe("the auth module", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(URL).To(Equal(expected))
 		})
+		It("should preserve case-sensitive challenge values", func() {
+			challenge := `Bearer Realm="https://registry.example/Tokens/Issue",Service="Registry.Example"`
+			imageRef, err := ref.ParseNormalizedNamed("registry.example/team/image:latest")
+			Expect(err).NotTo(HaveOccurred())
+
+			URL, err := auth.GetAuthURL(challenge, imageRef)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(URL.Path).To(Equal("/Tokens/Issue"))
+			Expect(URL.Query().Get("service")).To(Equal("Registry.Example"))
+		})
 
 		When("given an invalid challenge header", func() {
 			It("should return an error", func() {

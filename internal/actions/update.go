@@ -2,6 +2,7 @@ package actions
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/patbaumgartner/watchtower/internal/util"
 	"github.com/patbaumgartner/watchtower/pkg/container"
@@ -19,7 +20,6 @@ import (
 func Update(client container.Client, params types.UpdateParams) (types.Report, error) {
 	log.Debug("Checking containers for updated images")
 	progress := &session.Progress{}
-	staleCount := 0
 
 	if params.LifecycleHooks {
 		lifecycle.ExecutePreChecks(client, params)
@@ -29,8 +29,6 @@ func Update(client container.Client, params types.UpdateParams) (types.Report, e
 	if err != nil {
 		return nil, err
 	}
-
-	staleCheckFailed := 0
 
 	for i, targetContainer := range containers {
 		stale, newestImage, err := client.IsContainerStale(targetContainer, params)
@@ -52,16 +50,12 @@ func Update(client container.Client, params types.UpdateParams) (types.Report, e
 		if err != nil {
 			log.Infof("Unable to update container %q: %v. Proceeding to next.", targetContainer.Name(), err)
 			stale = false
-			staleCheckFailed++
 			progress.AddSkipped(targetContainer, err)
 		} else {
 			progress.AddScanned(targetContainer, newestImage)
 		}
 		containers[i].SetStale(stale)
 
-		if stale {
-			staleCount++
-		}
 	}
 
 	containers, err = sorter.SortByDependencies(containers)
@@ -70,6 +64,12 @@ func Update(client container.Client, params types.UpdateParams) (types.Report, e
 	}
 
 	UpdateImplicitRestart(containers)
+	if preflightFailed := preflightRestartSet(containers, progress, params); preflightFailed {
+		if params.LifecycleHooks {
+			lifecycle.ExecutePostChecks(client, params)
+		}
+		return progress.Report(), nil
+	}
 
 	var containersToUpdate []types.Container
 	for _, c := range containers {
@@ -92,6 +92,22 @@ func Update(client container.Client, params types.UpdateParams) (types.Report, e
 		lifecycle.ExecutePostChecks(client, params)
 	}
 	return progress.Report(), nil
+}
+
+func preflightRestartSet(containers []types.Container, progress *session.Progress, params types.UpdateParams) bool {
+	failed := false
+	for _, targetContainer := range containers {
+		if params.NoRestart || !targetContainer.ToRestart() || targetContainer.IsMonitorOnly(params) {
+			continue
+		}
+		if err := targetContainer.VerifyConfiguration(); err != nil {
+			failed = true
+			wrapped := fmt.Errorf("cannot safely recreate dependency-expanded update set; no containers were stopped: %w", err)
+			log.Infof("Unable to update container %q: %v", targetContainer.Name(), wrapped)
+			progress.AddSkipped(targetContainer, wrapped)
+		}
+	}
+	return failed
 }
 
 func performRollingRestart(containers []types.Container, client container.Client, params types.UpdateParams) map[types.ContainerID]error {

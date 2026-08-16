@@ -15,6 +15,7 @@ import (
 	sdkClient "github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/patbaumgartner/watchtower/internal/dockercompat"
 	"github.com/patbaumgartner/watchtower/pkg/registry"
 	"github.com/patbaumgartner/watchtower/pkg/registry/digest"
 	t "github.com/patbaumgartner/watchtower/pkg/types"
@@ -245,7 +246,11 @@ func (client dockerClient) GetNetworkConfig(c t.Container) *network.NetworkingCo
 		}
 
 		ep.Aliases = aliases
-		ep.MacAddress = ""
+		// API <1.44 supports only the legacy container-wide MAC in Config.
+		// Endpoint values are generated operational data or unsupported per-network settings.
+		if c.IsWatchtower() || !dockercompat.Supports("1.44") {
+			ep.MacAddress = ""
+		}
 		config.EndpointsConfig[name] = &ep
 	}
 	return config

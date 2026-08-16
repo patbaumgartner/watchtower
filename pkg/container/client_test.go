@@ -1,6 +1,9 @@
 package container
 
 import (
+	"encoding/json"
+	"os"
+
 	"github.com/docker/docker/api/types/network"
 	"time"
 
@@ -136,6 +139,41 @@ var _ = Describe("the client", func() {
 				err := c.RemoveImageByID(t.ImageID(image))
 				Expect(cerrdefs.IsNotFound(err)).To(BeTrue())
 			})
+		})
+	})
+	Describe("API 1.25 container recreation", func() {
+		It("should preserve AutoRemove and StopTimeout in the create request", func() {
+			api25, err := cli.NewClientWithOpts(
+				cli.WithHost(mockServer.URL()),
+				cli.WithHTTPClient(mockServer.HTTPTestServer.Client()),
+				cli.WithVersion("1.25"),
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			stopTimeout := 10
+			container := MockContainer(WithImageName("docker.io/prefix/imagename:latest"))
+			container.containerInfo.State = &dockerContainer.State{}
+			container.containerInfo.Config.StopTimeout = &stopTimeout
+			container.containerInfo.HostConfig.AutoRemove = true
+			container.containerInfo.NetworkSettings = &dockerContainer.NetworkSettings{
+				Networks: map[string]*network.EndpointSettings{},
+			}
+
+			mockServer.AppendHandlers(func(response http.ResponseWriter, request *http.Request) {
+				Expect(request.URL.Path).To(HaveSuffix("/containers/create"))
+				var createRequest dockerContainer.CreateRequest
+				Expect(json.NewDecoder(request.Body).Decode(&createRequest)).To(Succeed())
+				Expect(createRequest.HostConfig.AutoRemove).To(BeTrue())
+				Expect(createRequest.Config.StopTimeout).NotTo(BeNil())
+				Expect(*createRequest.Config.StopTimeout).To(Equal(stopTimeout))
+				response.Header().Set("Content-Type", "application/json")
+				response.WriteHeader(http.StatusCreated)
+				Expect(json.NewEncoder(response).Encode(dockerContainer.CreateResponse{ID: "new-container"})).To(Succeed())
+			})
+
+			client := dockerClient{api: api25}
+			_, err = client.StartContainer(container)
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 	When("listing containers", func() {
@@ -318,6 +356,47 @@ var _ = Describe("the client", func() {
 				Expect(client.GetNetworkConfig(container).EndpointsConfig[`test`].Aliases).To(Equal([]string{"One", "Two", "Four"}))
 				Expect(client.GetNetworkConfig(container).EndpointsConfig[`test`].MacAddress).To(BeEmpty())
 				Expect(container.ContainerInfo().NetworkSettings.Networks[`test`].MacAddress).To(Equal("02:42:ac:11:00:02"))
+			})
+		})
+		When(`a compatible API is explicitly selected`, func() {
+			It(`should preserve endpoint MAC addresses`, func() {
+				original, present := os.LookupEnv("DOCKER_API_VERSION")
+				Expect(os.Setenv("DOCKER_API_VERSION", "1.44")).To(Succeed())
+				defer func() {
+					if present {
+						_ = os.Setenv("DOCKER_API_VERSION", original)
+					} else {
+						_ = os.Unsetenv("DOCKER_API_VERSION")
+					}
+				}()
+				client := dockerClient{}
+				container := MockContainer(WithImageName("docker.io/prefix/imagename:latest"))
+				container.containerInfo.NetworkSettings = &dockerContainer.NetworkSettings{Networks: map[string]*network.EndpointSettings{
+					`test`: {MacAddress: "02:42:ac:11:00:02"},
+				}}
+
+				Expect(client.GetNetworkConfig(container).EndpointsConfig[`test`].MacAddress).To(Equal("02:42:ac:11:00:02"))
+			})
+			It(`should clear the running watchtower MAC to avoid a self-update collision`, func() {
+				original, present := os.LookupEnv("DOCKER_API_VERSION")
+				Expect(os.Setenv("DOCKER_API_VERSION", "1.44")).To(Succeed())
+				defer func() {
+					if present {
+						_ = os.Setenv("DOCKER_API_VERSION", original)
+					} else {
+						_ = os.Unsetenv("DOCKER_API_VERSION")
+					}
+				}()
+				client := dockerClient{}
+				container := MockContainer(
+					WithImageName("docker.io/patbaumgartner/watchtower:main"),
+					WithLabels(map[string]string{"com.centurylinklabs.watchtower": "true"}),
+				)
+				container.containerInfo.NetworkSettings = &dockerContainer.NetworkSettings{Networks: map[string]*network.EndpointSettings{
+					`test`: {MacAddress: "02:42:ac:11:00:02"},
+				}}
+
+				Expect(client.GetNetworkConfig(container).EndpointsConfig[`test`].MacAddress).To(BeEmpty())
 			})
 		})
 	})

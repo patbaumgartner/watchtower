@@ -1,14 +1,35 @@
 package container
 
 import (
+	"os"
+	"time"
+
 	dc "github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/go-connections/nat"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/patbaumgartner/watchtower/pkg/types"
 )
 
 var _ = Describe("the container", func() {
+	var originalAPIVersion string
+	var hadOriginalAPIVersion bool
+
+	BeforeEach(func() {
+		originalAPIVersion, hadOriginalAPIVersion = os.LookupEnv("DOCKER_API_VERSION")
+		Expect(os.Setenv("DOCKER_API_VERSION", "1.25")).To(Succeed())
+	})
+
+	AfterEach(func() {
+		if hadOriginalAPIVersion {
+			Expect(os.Setenv("DOCKER_API_VERSION", originalAPIVersion)).To(Succeed())
+		} else {
+			Expect(os.Unsetenv("DOCKER_API_VERSION")).To(Succeed())
+		}
+	})
+
 	Describe("VerifyConfiguration", func() {
 		When("verifying a container with no image info", func() {
 			It("should return an error", func() {
@@ -50,13 +71,13 @@ var _ = Describe("the container", func() {
 			})
 		})
 		When("verifying a container with port bindings, but no exposed ports", func() {
-			It("should make the config compatible with updating", func() {
+			It("should not mutate the inspected config", func() {
 				c := MockContainer(WithPortBindings("80/tcp"))
 				c.containerInfo.Config.ExposedPorts = nil
 				Expect(c.VerifyConfiguration()).To(Succeed())
 
-				Expect(c.containerInfo.Config.ExposedPorts).ToNot(BeNil())
-				Expect(c.containerInfo.Config.ExposedPorts).To(BeEmpty())
+				Expect(c.containerInfo.Config.ExposedPorts).To(BeNil())
+				Expect(c.GetCreateConfig().ExposedPorts).To(HaveKey(nat.Port("80/tcp")))
 			})
 		})
 		When("verifying a container with port bindings and exposed ports is non-nil", func() {
@@ -66,6 +87,50 @@ var _ = Describe("the container", func() {
 				err := c.VerifyConfiguration()
 				Expect(err).ToNot(HaveOccurred())
 			})
+		})
+		DescribeTable("rejecting mount options that cannot be recreated through Docker API 1.25",
+			func(containerMount mount.Mount, requiredVersion string) {
+				c := MockContainer(WithPortBindings())
+				c.containerInfo.HostConfig.Mounts = []mount.Mount{containerMount}
+				Expect(c.VerifyConfiguration()).To(MatchError(ContainSubstring("Docker API " + requiredVersion)))
+			},
+			Entry("non-recursive bind mounts", mount.Mount{Target: "/data", BindOptions: &mount.BindOptions{NonRecursive: true}}, "1.40"),
+			Entry("bind mountpoint creation", mount.Mount{Target: "/data", BindOptions: &mount.BindOptions{CreateMountpoint: true}}, "1.42"),
+			Entry("forced recursive read-only bind mounts", mount.Mount{Target: "/data", BindOptions: &mount.BindOptions{ReadOnlyForceRecursive: true}}, "1.44"),
+			Entry("volume subpaths", mount.Mount{Target: "/data", VolumeOptions: &mount.VolumeOptions{Subpath: "child"}}, "1.45"),
+			Entry("image mounts", mount.Mount{Type: mount.TypeImage, Target: "/data"}, "1.48"),
+			Entry("recursive read-only bind mounts", mount.Mount{Type: mount.TypeBind, Target: "/data", ReadOnly: true, BindOptions: &mount.BindOptions{}}, "1.44"),
+		)
+		It("accepts mount options supported by Docker API 1.25", func() {
+			c := MockContainer(WithPortBindings())
+			c.containerInfo.HostConfig.Mounts = []mount.Mount{{
+				Type:        mount.TypeBind,
+				Target:      "/data",
+				BindOptions: &mount.BindOptions{},
+			}}
+			Expect(c.VerifyConfiguration()).To(Succeed())
+		})
+		It("accepts legacy non-recursive read-only bind mounts", func() {
+			c := MockContainer(WithPortBindings())
+			c.containerInfo.HostConfig.Mounts = []mount.Mount{{
+				Type: mount.TypeBind, Target: "/data", ReadOnly: true,
+				BindOptions: &mount.BindOptions{ReadOnlyNonRecursive: true},
+			}}
+			Expect(c.VerifyConfiguration()).To(Succeed())
+		})
+		It("rejects modern host and network fields that API 1.25 would discard", func() {
+			c := MockContainer(WithPortBindings())
+			c.containerInfo.HostConfig.Annotations = map[string]string{"example": "value"}
+			Expect(c.VerifyConfiguration()).To(MatchError(ContainSubstring("Docker API 1.43")))
+		})
+		It("rejects legacy kernel memory outside its API 1.40 through 1.41 window", func() {
+			c := MockContainer(WithPortBindings())
+			c.containerInfo.HostConfig.KernelMemory = 1024
+			Expect(c.VerifyConfiguration()).To(MatchError(ContainSubstring("Docker API 1.40 or 1.41")))
+			Expect(os.Setenv("DOCKER_API_VERSION", "1.40")).To(Succeed())
+			Expect(c.VerifyConfiguration()).To(Succeed())
+			Expect(os.Setenv("DOCKER_API_VERSION", "1.42")).To(Succeed())
+			Expect(c.VerifyConfiguration()).To(MatchError(ContainSubstring("Docker API 1.40 or 1.41")))
 		})
 	})
 	Describe("GetCreateConfig", func() {
@@ -99,12 +164,40 @@ var _ = Describe("the container", func() {
 				}))
 				Expect(c.GetCreateConfig().Healthcheck).To(Equal(&dc.HealthConfig{}))
 			})
+			It("should not mutate inspected healthcheck or label metadata", func() {
+				c := MockContainer(
+					WithHealthcheck(dc.HealthConfig{Test: []string{"CMD", "true"}, Interval: 30}),
+					WithImageHealthcheck(dc.HealthConfig{Test: []string{"CMD", "true"}, Interval: 30}),
+					WithLabels(map[string]string{"example": "value"}),
+				)
+
+				_ = c.GetCreateConfig()
+
+				Expect(c.containerInfo.Config.Healthcheck.Test).To(Equal([]string{"CMD", "true"}))
+				Expect(c.containerInfo.Config.Healthcheck.Interval).To(Equal(time.Duration(30)))
+				Expect(c.containerInfo.Config.Labels).To(HaveKeyWithValue("example", "value"))
+			})
 		})
 		When("container healthcheck has a start interval", func() {
-			It("should omit the field unsupported by Docker API 1.25", func() {
+			It("should reject a custom field unsupported by Docker API 1.25", func() {
 				c := MockContainer(WithHealthcheck(dc.HealthConfig{
 					StartInterval: 5,
 				}))
+				Expect(c.VerifyConfiguration()).To(MatchError(ContainSubstring("requires Docker API 1.44")))
+			})
+			It("should preserve the field when a compatible API is selected", func() {
+				Expect(os.Setenv("DOCKER_API_VERSION", "1.44")).To(Succeed())
+				c := MockContainer(WithHealthcheck(dc.HealthConfig{
+					StartInterval: 5,
+				}))
+				Expect(c.GetCreateConfig().Healthcheck.StartInterval).To(Equal(time.Duration(5)))
+			})
+			It("should inherit the new image default when the old value came from the old image", func() {
+				Expect(os.Setenv("DOCKER_API_VERSION", "1.44")).To(Succeed())
+				c := MockContainer(
+					WithHealthcheck(dc.HealthConfig{StartInterval: 5}),
+					WithImageHealthcheck(dc.HealthConfig{StartInterval: 5}),
+				)
 				Expect(c.GetCreateConfig().Healthcheck.StartInterval).To(BeZero())
 			})
 		})
