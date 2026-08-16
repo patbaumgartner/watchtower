@@ -7,7 +7,7 @@ launching watchtower.
 $ docker run -d \
     --name watchtower \
     -v /var/run/docker.sock:/var/run/docker.sock \
-   patbaumgartner/watchtower \
+   patbaumgartner/watchtower:main \
     nginx redis
 ```
 
@@ -18,7 +18,7 @@ the watchtower container after its execution.
 ```bash
 $ docker run --rm \
     -v /var/run/docker.sock:/var/run/docker.sock \
-   patbaumgartner/watchtower \
+   patbaumgartner/watchtower:main \
     --run-once \
     nginx redis
 ```
@@ -166,13 +166,15 @@ Environment Variable: DOCKER_HOST
 ```
 
 ## Docker API version
-The API version to use by the Docker client for connecting to the Docker daemon. The minimum supported version is 1.24.
+The exact API version used by the Docker client. The default and minimum supported version is 1.25 for compatibility
+with older Docker daemons used by Synology DSM. Docker SDK v28 supports up to API 1.51. Set a newer version only when
+the target daemon supports it.
 
 ```text
             Argument: --api-version, -a
 Environment Variable: DOCKER_API_VERSION
                 Type: String
-             Default: "1.24"
+             Default: "1.25"
 ```
 
 ## Include restarting

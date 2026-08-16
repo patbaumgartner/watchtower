@@ -2,8 +2,8 @@
 
 ## Supported Versions
 
-Security updates are only applied to the latest release. Because the `latest` tag is what most deployments track,
-and watchtower updates itself, those fixes reach you on the next update cycle.
+Security updates are applied to the maintained `main` image until the first stable release. After stable releases
+begin, only the latest release line and `latest` image tag will receive security updates.
 
 ## Reporting a Vulnerability
 

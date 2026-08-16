@@ -6,8 +6,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Please reproduce against the latest image before reporting:
-        `patbaumgartner/watchtower:latest`. Reports against
+        Please reproduce against the maintained image before reporting:
+        `patbaumgartner/watchtower:main`. Reports against
         the retired `containrrr/watchtower` or the old `v2tec` image cannot be acted on here.
 
   - type: textarea
@@ -54,7 +54,9 @@ body:
       value: |
         - Platform
         - Architecture
-        - Docker Version
+        - Watchtower image tag and digest
+        - Docker server version, API version, and minimum API version
+        - Synology DSM and Container Manager versions, if applicable
     validations:
       required: true
 

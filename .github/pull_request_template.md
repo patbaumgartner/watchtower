@@ -1,17 +1,18 @@
-<!--
+## What changed
 
-Thank you for contributing to the watchtower project! 🙏
+Describe the behavior change and why it is needed.
 
-We truly appreciate all the contributions we get from the community.
+## Related issue
 
-To make your PR experience as smooth as possible, make sure that you
-include the following in your PR:
+Use `Fixes #123` when the pull request resolves an issue.
 
-- What your PR contributes
-- Which issues it solves (preferrably using auto closing instructions like "closes #123".
-- Tests that verify the code your contributing
-- Updates to the documentation
+## Validation
 
-Thank you again! ✨
+List the commands or manual checks you ran.
 
--->
+## Checklist
+
+- [ ] Tests cover the changed behavior.
+- [ ] Documentation and examples match the implementation.
+- [ ] Docker API 1.25 and Synology compatibility are preserved, or the compatibility impact is documented.
+- [ ] Dependency and image references remain pinned to immutable versions or digests.

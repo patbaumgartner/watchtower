@@ -9,8 +9,7 @@ and demeaning behaviour are not acceptable in issues, pull requests, discussions
 
 Report unacceptable behaviour privately by opening a
 [security advisory](https://github.com/patbaumgartner/watchtower/security/advisories/new) — it is the private
-channel this repository has — or by contacting [@patbaumgartner](https://github.com/patbaumgartner) directly on
-GitHub. Reports are handled confidentially.
+channel available for this repository. Reports are handled confidentially.
 
 This is a small, best-effort fork, so enforcement is at the maintainer's discretion and typically means editing or
 removing the offending content and, for repeated behaviour, blocking the account.

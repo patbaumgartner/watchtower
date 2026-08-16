@@ -27,7 +27,7 @@
 
 !!! info "Maintained fork"
     This is a maintained fork of [containrrr/watchtower](https://github.com/containrrr/watchtower), which was retired
-  upstream. Images are published to Docker Hub as `patbaumgartner/watchtower`.
+  upstream. Images are published to Docker Hub as `patbaumgartner/watchtower:main`.
 
 ## Quick Start
 
@@ -42,7 +42,7 @@ the following command:
     $ docker run -d \
     --name watchtower \
     -v /var/run/docker.sock:/var/run/docker.sock \
-    patbaumgartner/watchtower
+    patbaumgartner/watchtower:main
     ```
 
 === "docker-compose.yml"
@@ -51,7 +51,7 @@ the following command:
     version: "3"
     services:
       watchtower:
-        image: patbaumgartner/watchtower
+        image: patbaumgartner/watchtower:main
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
     ```

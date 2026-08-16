@@ -63,7 +63,7 @@ When the watchtower Docker container is started, the created configuration file
 (`<PATH>/config.json` in this example) needs to be passed to the container:
 
 ```bash
-docker run [...] -v <PATH>/config.json:/config.json patbaumgartner/watchtower
+docker run [...] -v <PATH>/config.json:/config.json patbaumgartner/watchtower:main
 ```
 
 ### Share the Docker configuration file
@@ -76,7 +76,7 @@ additional configuration file is not necessary.
 When the Docker container is started, pass the configuration file to watchtower:
 
 ```bash
-docker run [...] -v <PATH_TO_HOME_DIR>/.docker/config.json:/config.json patbaumgartner/watchtower
+docker run [...] -v <PATH_TO_HOME_DIR>/.docker/config.json:/config.json patbaumgartner/watchtower:main
 ```
 
 When creating the watchtower container via docker-compose, use the following lines:
@@ -85,7 +85,7 @@ When creating the watchtower container via docker-compose, use the following lin
 version: "3.4"
 services:
   watchtower:
-    image: patbaumgartner/watchtower:latest
+    image: patbaumgartner/watchtower:main
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - <PATH_TO_HOME_DIR>/.docker/config.json:/config.json
@@ -101,7 +101,7 @@ version: "3.4"
 
 services: 
   watchtower:
-    image: patbaumgartner/watchtower
+    image: patbaumgartner/watchtower:main
     environment:
         DOCKER_CONFIG: /config
     volumes:
@@ -110,98 +110,37 @@ services:
 ```
 
 ## Credential helpers
-Some private Docker registries (the most prominent probably being AWS ECR) use non-standard ways of authentication.
-To be able to use this together with watchtower, we need to use a credential helper.
+Some registries, notably AWS ECR, use a Docker credential helper. Helpers are intentionally not bundled in the
+Watchtower image. Install the helper for your platform from its maintained upstream project, then make both the helper
+binary and Docker configuration available inside the container.
 
-To keep the image size small we've decided to not include any helpers in the watchtower image, instead we'll put the
-helper in a separate container and mount it using volumes.
+For [amazon-ecr-credential-helper](https://github.com/awslabs/amazon-ecr-credential-helper), configure the registry in
+`config.json`:
 
-### Example
-Example implementation for use with [amazon-ecr-credential-helper](https://github.com/awslabs/amazon-ecr-credential-helper):
+```json
+{
+  "credHelpers": {
+    "<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_ECR_REGION>.amazonaws.com": "ecr-login"
+  }
+}
+```
 
-Use the dockerfile below to build the [amazon-ecr-credential-helper](https://github.com/awslabs/amazon-ecr-credential-helper),
-in a volume that may be mounted onto your watchtower container.
+Mount that file at `/config.json`, mount the directory containing `docker-credential-ecr-login`, and include that
+directory in `PATH`:
 
-1.  Create the Dockerfile (contents below):
-    ```Dockerfile
-    FROM golang:1.20
-    
-    ENV GO111MODULE off
-    ENV CGO_ENABLED 0
-    ENV REPO github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login
-    
-    RUN go get -u $REPO
-    
-    RUN rm /go/bin/docker-credential-ecr-login
-    
-    RUN go build \
-     -o /go/bin/docker-credential-ecr-login \
-     /go/src/$REPO
-    
-    WORKDIR /go/bin/
-    ```
-
-2.  Use the following commands to build the aws-ecr-dock-cred-helper and store it's output in a volume:
-    ```bash
-    # Create a volume to store the command (once built)
-    docker volume create helper 
-    
-    # Build the container
-    docker build -t aws-ecr-dock-cred-helper .
-    
-    # Build the command and store it in the new volume in the /go/bin directory.
-    docker run  -d --rm --name aws-cred-helper \
-      --volume helper:/go/bin aws-ecr-dock-cred-helper
-    ```
-
-3.  Create a configuration file for docker, and store it in $HOME/.docker/config.json (replace the <AWS_ACCOUNT_ID>
-   placeholders with your AWS Account ID and <AWS_ECR_REGION> with your AWS ECR Region):
-    ```json
-    {
-       "credsStore" : "ecr-login",
-       "HttpHeaders" : {
-         "User-Agent" : "Docker-Client/19.03.1 (XXXXXX)"
-       },
-       "auths" : {
-         "<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_ECR_REGION>.amazonaws.com" : {}
-       },
-       "credHelpers": {
-         "<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_ECR_REGION>.amazonaws.com" : "ecr-login"
-       }
-    }
-    ```
-
-4.  Create a docker-compose file (as an example) to help launch the container:
-    ```yaml
-    version: "3.4"
-    services:
-     # Check for new images and restart things if a new image exists
-     # for any of our containers.
-     watchtower:
-      image: patbaumgartner/watchtower:latest
-       volumes:
-         - /var/run/docker.sock:/var/run/docker.sock
-         - .docker/config.json:/config.json
-         - helper:/go/bin
-       environment:
-         - HOME=/
-         - PATH=$PATH:/go/bin
-         - AWS_REGION=us-west-1
+```yaml
+services:
+  watchtower:
+    image: patbaumgartner/watchtower:main
     volumes:
-     helper: 
-       external: true
-    ```
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./.docker/config.json:/config.json:ro
+      - ./bin:/credential-helpers:ro
+    environment:
+      PATH: /credential-helpers
+      AWS_REGION: us-west-1
+      DOCKER_API_VERSION: "1.25"
+```
 
-A few additional notes:
-
-1.  With docker-compose the volume (helper, in this case) MUST be set to `external: true`, otherwise docker-compose 
-    will preface it with the directory name.
-
-2.  Note that "credsStore" : "ecr-login" is needed - and in theory if you have that you can remove the 
-    credHelpers section
-
-3.  I have this running on an EC2 instance that has credentials assigned to it - so no keys are needed; however, 
-    you may need to include the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables as well.
-
-4.  An alternative to adding the various variables is to create a ~/.aws/config and ~/.aws/credentials files and 
-    place the settings there, then mount the ~/.aws directory to / in the container.
+Use an EC2 instance role where possible. If static AWS credentials are unavoidable, supply them through a secret
+manager rather than committing them to Compose or `config.json`.

@@ -16,7 +16,7 @@ services:
       - "com.centurylinklabs.watchtower.enable=true"
 
   watchtower:
-    image: patbaumgartner/watchtower
+    image: patbaumgartner/watchtower:main
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     command: --debug --http-api-update

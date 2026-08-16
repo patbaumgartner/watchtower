@@ -34,7 +34,7 @@ echo "watchtower path is $WATCHTOWER"
 
 #  Create Dockerfile template
 DOCKERFILE=$(cat << EOF
-FROM node:alpine
+FROM node:24-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43
 
 LABEL com.centurylinklabs.watchtower.lifecycle.pre-update="cat /opt/test/value.txt"
 LABEL com.centurylinklabs.watchtower.lifecycle.post-update="echo image > /opt/test/value.txt"

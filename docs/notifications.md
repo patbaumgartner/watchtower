@@ -69,7 +69,7 @@ docker run -d \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -e WATCHTOWER_NOTIFICATION_URL="discord://token@channel slack://watchtower@token-a/token-b/token-c" \
   -e WATCHTOWER_NOTIFICATION_TEMPLATE="{{range .}}{{.Time.Format \"2006-01-02 15:04:05\"}} ({{.Level}}): {{.Message}}{{println}}{{end}}" \
-  patbaumgartner/watchtower
+  patbaumgartner/watchtower:main
 ```
 
 ## Report templates
@@ -138,7 +138,7 @@ Example using a custom report template that always sends a session report after 
         {{range .Entries -}}{{.Message}}{{\"\n\"}}{{- end -}}
       {{- end -}}
       " \
-      patbaumgartner/watchtower
+      patbaumgartner/watchtower:main
     ```
 
 === "docker-compose"
@@ -147,10 +147,10 @@ Example using a custom report template that always sends a session report after 
     version: "3"
     services:
       watchtower:
-        image: patbaumgartner/watchtower
+        image: patbaumgartner/watchtower:main
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
-        env:
+        environment:
           WATCHTOWER_NOTIFICATION_REPORT: "true"
           WATCHTOWER_NOTIFICATION_URL: >
             discord://token@channel
@@ -199,7 +199,7 @@ If watchtower is started with `notify-upgrade` as it's first argument, it will g
     -v /var/run/docker.sock:/var/run/docker.sock \
     -e WATCHTOWER_NOTIFICATIONS=slack \
     -e WATCHTOWER_NOTIFICATION_SLACK_HOOK_URL="https://hooks.slack.com/services/xxx/yyyyyyyyyyyyyyy" \
-    patbaumgartner/watchtower \
+    patbaumgartner/watchtower:main \
     notify-upgrade
     ```
 
@@ -209,10 +209,10 @@ If watchtower is started with `notify-upgrade` as it's first argument, it will g
     version: "3"
     services:
       watchtower:
-        image: patbaumgartner/watchtower
+        image: patbaumgartner/watchtower:main
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
-        env:
+        environment:
           WATCHTOWER_NOTIFICATIONS: slack
           WATCHTOWER_NOTIFICATION_SLACK_HOOK_URL: https://hooks.slack.com/services/xxx/yyyyyyyyyyyyyyy
         command: notify-upgrade
@@ -228,7 +228,7 @@ You can then copy this file from the container (a message with the full command 
     --name watchtower \
     -v /var/run/docker.sock:/var/run/docker.sock \
     --env-file watchtower-notifications.env \
-    patbaumgartner/watchtower
+    patbaumgartner/watchtower:main
     ```
 
 === "docker-compose.yml"
@@ -237,7 +237,7 @@ You can then copy this file from the container (a message with the full command 
     version: "3"
     services:
       watchtower:
-        image: patbaumgartner/watchtower
+        image: patbaumgartner/watchtower:main
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
         env_file:
@@ -251,7 +251,7 @@ To receive notifications by email, the following command-line options, or their 
 -   `--notification-email-from` (env. `WATCHTOWER_NOTIFICATION_EMAIL_FROM`): The e-mail address from which notifications will be sent.
 -   `--notification-email-to` (env. `WATCHTOWER_NOTIFICATION_EMAIL_TO`): The e-mail address to which notifications will be sent.
 -   `--notification-email-server` (env. `WATCHTOWER_NOTIFICATION_EMAIL_SERVER`): The SMTP server to send e-mails through.
--   `--notification-email-server-tls-skip-verify` (env. `WATCHTOWER_NOTIFICATION_EMAIL_SERVER_TLS_SKIP_VERIFY`): Do not verify the TLS certificate of the mail server. This should be used only for testing.
+-   `--notification-email-server-tls-skip-verify` (env. `WATCHTOWER_NOTIFICATION_EMAIL_SERVER_TLS_SKIP_VERIFY`): Deprecated and rejected because the notification backend cannot disable certificate verification without also disabling SMTP encryption.
 -   `--notification-email-server-port` (env. `WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PORT`): The port used to connect to the SMTP server to send e-mails through. Defaults to `25`.
 -   `--notification-email-server-user` (env. `WATCHTOWER_NOTIFICATION_EMAIL_SERVER_USER`): The username to authenticate with the SMTP server with.
 -   `--notification-email-server-password` (env. `WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PASSWORD`): The password to authenticate with the SMTP server with. Can also reference a file, in which case the contents of the file are used.
@@ -272,58 +272,12 @@ docker run -d \
   -e WATCHTOWER_NOTIFICATION_EMAIL_SERVER_USER=fromaddress@gmail.com \
   -e WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PASSWORD=app_password \
   -e WATCHTOWER_NOTIFICATION_EMAIL_DELAY=2 \
-  patbaumgartner/watchtower
+  patbaumgartner/watchtower:main
 ```
 
-The previous example assumes, that you already have an SMTP server up and running you can connect to. If you don't or you want to bring up watchtower with your own simple SMTP relay the following `docker-compose.yml` might be a good start for you.
-
-The following example assumes, that your domain is called `your-domain.com` and that you are going to use a certificate valid for `smtp.your-domain.com`. This hostname has to be used as `WATCHTOWER_NOTIFICATION_EMAIL_SERVER` otherwise the TLS connection is going to fail with `Failed to send notification email` or `connect: connection refused`. We also have to add a network for this setup in order to add an alias to it. If you also want to enable DKIM or other features on the SMTP server, you will find more information at [freinet/postfix-relay](https://hub.docker.com/r/freinet/postfix-relay).
-
-Example including an SMTP relay:
-
-```yaml
-version: '3.8'
-services:
-  watchtower:
-    image: patbaumgartner/watchtower:latest
-    container_name: watchtower
-    environment:
-      WATCHTOWER_MONITOR_ONLY: 'true'
-      WATCHTOWER_NOTIFICATIONS: email
-      WATCHTOWER_NOTIFICATION_EMAIL_FROM: from-address@your-domain.com
-      WATCHTOWER_NOTIFICATION_EMAIL_TO: to-address@your-domain.com
-      # you have to use a network alias here, if you use your own certificate
-      WATCHTOWER_NOTIFICATION_EMAIL_SERVER: smtp.your-domain.com
-      WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PORT: 25
-      WATCHTOWER_NOTIFICATION_EMAIL_DELAY: 2
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - watchtower
-    depends_on:
-      - postfix
-
-  # SMTP needed to send out status emails
-  postfix:
-    image: freinet/postfix-relay:latest
-    expose:
-      - 25
-    environment:
-      MAILNAME: somename.your-domain.com
-      TLS_KEY: '/etc/ssl/domains/your-domain.com/your-domain.com.key'
-      TLS_CRT: '/etc/ssl/domains/your-domain.com/your-domain.com.crt'
-      TLS_CA: '/etc/ssl/domains/your-domain.com/intermediate.crt'
-    volumes:
-      - /etc/ssl/domains/your-domain.com/:/etc/ssl/domains/your-domain.com/:ro
-    networks:
-      watchtower:
-        # this alias is really important to make your certificate work
-        aliases:
-          - smtp.your-domain.com
-networks:
-  watchtower:
-    external: false
-```
+The previous example assumes that an SMTP server is already available. If you operate your own relay, configure it
+separately and point Watchtower at its TLS-protected hostname. Relay images vary in architecture support and security
+policy, so this project does not prescribe one as part of the Watchtower deployment.
 
 ### Slack
 
@@ -332,6 +286,9 @@ To receive notifications in Slack, add `slack` to the `--notifications` option o
 Additionally, you should set the Slack webhook URL using the `--notification-slack-hook-url` option or the `WATCHTOWER_NOTIFICATION_SLACK_HOOK_URL` environment variable. This option can also reference a file, in which case the contents of the file are used.
 
 By default, watchtower will send messages under the name `watchtower`, you can customize this string through the `--notification-slack-identifier` option or the `WATCHTOWER_NOTIFICATION_SLACK_IDENTIFIER` environment variable.
+
+The Slack icon can be set with `--notification-slack-icon-emoji` / `WATCHTOWER_NOTIFICATION_SLACK_ICON_EMOJI` or
+`--notification-slack-icon-url` / `WATCHTOWER_NOTIFICATION_SLACK_ICON_URL`.
 
 Other, optional, variables include:
 
@@ -347,7 +304,7 @@ docker run -d \
   -e WATCHTOWER_NOTIFICATION_SLACK_HOOK_URL="https://hooks.slack.com/services/xxx/yyyyyyyyyyyyyyy" \
   -e WATCHTOWER_NOTIFICATION_SLACK_IDENTIFIER=watchtower-server-1 \
   -e WATCHTOWER_NOTIFICATION_SLACK_CHANNEL=#my-custom-channel \
-  patbaumgartner/watchtower
+  patbaumgartner/watchtower:main
 ```
 
 ### Microsoft Teams
@@ -367,7 +324,7 @@ docker run -d \
   -e WATCHTOWER_NOTIFICATIONS=msteams \
   -e WATCHTOWER_NOTIFICATION_MSTEAMS_HOOK_URL="https://outlook.office.com/webhook/xxxxxxxx@xxxxxxx/IncomingWebhook/yyyyyyyy/zzzzzzzzzz" \
   -e WATCHTOWER_NOTIFICATION_MSTEAMS_USE_LOG_DATA=true \
-  patbaumgartner/watchtower
+  patbaumgartner/watchtower:main
 ```
 
 ### Gotify
@@ -381,7 +338,7 @@ docker run -d \
   -e WATCHTOWER_NOTIFICATIONS=gotify \
   -e WATCHTOWER_NOTIFICATION_GOTIFY_URL="https://my.gotify.tld/" \
   -e WATCHTOWER_NOTIFICATION_GOTIFY_TOKEN="SuperSecretToken" \
-  patbaumgartner/watchtower
+  patbaumgartner/watchtower:main
 ```
 
 `-e WATCHTOWER_NOTIFICATION_GOTIFY_TOKEN` or `--notification-gotify-token` can also reference a file, in which case the contents of the file are used.

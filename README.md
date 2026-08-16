@@ -25,11 +25,12 @@ With watchtower you can update the running version of your containerized app sim
 
 Watchtower will pull down your new image, gracefully shut down your existing container and restart it with the same options that were used when it was deployed initially. Run the watchtower container with the following command:
 
-```
-$ docker run --detach \
+```bash
+docker run --detach \
     --name watchtower \
     --volume /var/run/docker.sock:/var/run/docker.sock \
-  patbaumgartner/watchtower
+  --env DOCKER_API_VERSION=1.25 \
+  patbaumgartner/watchtower:main
 ```
 
 Watchtower is intended to be used in homelabs, media centers, local dev environments, and similar. We do **not** recommend using Watchtower in a commercial or production environment. If that is you, you should be looking into using Kubernetes. If that feels like too big a step for you, please look into solutions like [MicroK8s](https://microk8s.io/) and [k3s](https://k3s.io/) that take away a lot of the toil of running a Kubernetes cluster. 
@@ -40,27 +41,29 @@ Images are published to Docker Hub:
 
 | Registry | Image |
 | --- | --- |
-| Docker Hub | `patbaumgartner/watchtower` |
+| Docker Hub | `patbaumgartner/watchtower:main` |
 
 Each tag is a multi-architecture manifest, so `docker pull` selects the right build automatically:
 
 `linux/amd64`, `linux/arm64`, `linux/arm/v7`, `linux/386`
 
-That covers every Synology NAS able to run Container Manager — Intel/AMD models resolve to `linux/amd64`, and
-ARM models (Realtek/Marvell) resolve to `linux/arm64` or `linux/arm/v7`. See
+Intel/AMD Synology models resolve to `linux/amd64`; supported ARM models resolve to `linux/arm64` or `linux/arm/v7`.
+The Docker daemon must expose API 1.25 or newer. See
 [Synology and other NAS devices](https://patbaumgartner.github.io/watchtower/usage-overview/#synology-and-other-nas-devices).
 
-Tags: `latest` and `X.Y.Z` / `X.Y` / `X` come from releases; `main` is built from the tip of the default branch and is not
-recommended for unattended updates.
+The maintained image currently uses the `main` tag. Version and `latest` tags are created only by a release.
 
 ## Documentation
+
 The full documentation is available at https://patbaumgartner.github.io/watchtower.
+
+Compatibility constraints and intentionally pinned dependencies are documented in
+[Compatibility and dependency pins](https://patbaumgartner.github.io/watchtower/compatibility/).
 
 ## Contributors
 
-Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+Watchtower builds on years of work by the original project contributors:
 
-<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
 <table>
@@ -193,6 +196,5 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 <!-- markdownlint-restore -->
 <!-- prettier-ignore-end -->
 
-<!-- ALL-CONTRIBUTORS-LIST:END -->
-
-This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
+See the [complete contributor graph](https://github.com/patbaumgartner/watchtower/graphs/contributors) for current
+and historical contributions.

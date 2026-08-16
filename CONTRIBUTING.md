@@ -41,7 +41,7 @@ you ask buildx for:
 
 ```bash
 docker buildx build \
-  --platform linux/amd64,linux/arm64 \
+  --platform linux/amd64,linux/arm64,linux/arm/v7,linux/386 \
   -f dockerfiles/Dockerfile \
   -t watchtower:dev .
 ```
@@ -57,5 +57,6 @@ the build:
 ```bash
 pip install -r docs-requirements.txt
 scripts/build-tplprev.sh               # builds the notification template preview WASM bundle
+mkdocs build --strict
 mkdocs serve
 ```
