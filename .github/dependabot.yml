@@ -1,34 +1,90 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
-
 version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Zurich"
+    open-pull-requests-limit: 5
+    groups:
+      codeql-action:
+        patterns: ["github/codeql-action*"]
+    reviewers: ["patbaumgartner"]
+    assignees: ["patbaumgartner"]
+    commit-message:
+      prefix: "ci"
+      include: "scope"
     labels: ["dependencies", "ci"]
 
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Zurich"
+    open-pull-requests-limit: 10
     labels: ["dependencies"]
+    reviewers: ["patbaumgartner"]
+    assignees: ["patbaumgartner"]
+    commit-message:
+      prefix: "deps(go)"
+      include: "scope"
     groups:
       go-dependencies:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+    ignore:
+      # Docker SDK v29 moved to github.com/moby/moby/client and requires API 1.40.
+      # Keep v28 while Synology compatibility requires Docker API 1.25.
+      - dependency-name: "github.com/docker/docker"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "github.com/docker/cli"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Zurich"
+    open-pull-requests-limit: 5
+    reviewers: ["patbaumgartner"]
+    assignees: ["patbaumgartner"]
+    commit-message:
+      prefix: "deps(docker)"
+      include: "scope"
+    labels: ["dependencies", "docker"]
 
   - package-ecosystem: "docker"
     directory: "/dockerfiles"
     schedule:
       interval: "weekly"
-    labels: ["dependencies"]
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Zurich"
+    open-pull-requests-limit: 5
+    reviewers: ["patbaumgartner"]
+    assignees: ["patbaumgartner"]
+    commit-message:
+      prefix: "deps(docker)"
+      include: "scope"
+    labels: ["dependencies", "docker"]
 
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Zurich"
+    open-pull-requests-limit: 5
+    reviewers: ["patbaumgartner"]
+    assignees: ["patbaumgartner"]
+    commit-message:
+      prefix: "deps(docs)"
+      include: "scope"
     labels: ["dependencies", "documentation"]

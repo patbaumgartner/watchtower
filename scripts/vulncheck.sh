@@ -22,7 +22,7 @@ ACCEPTED=(
   GO-2026-4883
 )
 
-report=$(go run golang.org/x/vuln/cmd/govulncheck@latest -format json ./...)
+report=$(go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 -format json ./...)
 accepted=$(printf '%s\n' "${ACCEPTED[@]}" | jq -R . | jq -sc .)
 
 # A finding whose first trace frame names a function is one govulncheck considers

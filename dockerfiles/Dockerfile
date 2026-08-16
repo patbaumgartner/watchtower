@@ -4,6 +4,7 @@
 # into a scratch image. Build with:
 #
 #   docker buildx build --platform linux/amd64,linux/arm64 -f dockerfiles/Dockerfile .
+# Keep tags for Dependabot discovery and digests for reproducibility. Update both together.
 
 FROM --platform=$BUILDPLATFORM golang:1.26.6-alpine@sha256:af8d6740070b8906d12eae1c3e3ea0957fb63f492051ea05e354c38ef9fe88df AS builder
 
@@ -28,6 +29,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     -o /out/watchtower .
 
 FROM --platform=$BUILDPLATFORM alpine:3.22@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce AS certs
+# Package versions are coupled to this Alpine release and must remain exact.
 RUN apk add --no-cache ca-certificates=20260611-r0 tzdata=2026c-r0
 
 FROM scratch
