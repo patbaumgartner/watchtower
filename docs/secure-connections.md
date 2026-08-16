@@ -10,5 +10,5 @@ docker run -d \
   -e DOCKER_HOST=$DOCKER_HOST \
   -e DOCKER_CERT_PATH=/etc/ssl/docker \
   -v $DOCKER_CERT_PATH:/etc/ssl/docker \
-  patbaumgartner/watchtower:main --tlsverify
+  patbaumgartner/watchtower:latest --tlsverify
 ```

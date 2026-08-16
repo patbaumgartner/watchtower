@@ -63,7 +63,7 @@ When the watchtower Docker container is started, the created configuration file
 (`<PATH>/config.json` in this example) needs to be passed to the container:
 
 ```bash
-docker run [...] -v <PATH>/config.json:/config.json patbaumgartner/watchtower:main
+docker run [...] -v <PATH>/config.json:/config.json patbaumgartner/watchtower:latest
 ```
 
 ### Share the Docker configuration file
@@ -76,7 +76,7 @@ additional configuration file is not necessary.
 When the Docker container is started, pass the configuration file to watchtower:
 
 ```bash
-docker run [...] -v <PATH_TO_HOME_DIR>/.docker/config.json:/config.json patbaumgartner/watchtower:main
+docker run [...] -v <PATH_TO_HOME_DIR>/.docker/config.json:/config.json patbaumgartner/watchtower:latest
 ```
 
 When creating the watchtower container via docker-compose, use the following lines:
@@ -85,7 +85,7 @@ When creating the watchtower container via docker-compose, use the following lin
 version: "3.4"
 services:
   watchtower:
-    image: patbaumgartner/watchtower:main
+    image: patbaumgartner/watchtower:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - <PATH_TO_HOME_DIR>/.docker/config.json:/config.json
@@ -101,7 +101,7 @@ version: "3.4"
 
 services: 
   watchtower:
-    image: patbaumgartner/watchtower:main
+    image: patbaumgartner/watchtower:latest
     environment:
         DOCKER_CONFIG: /config
     volumes:
@@ -131,7 +131,7 @@ directory in `PATH`:
 ```yaml
 services:
   watchtower:
-    image: patbaumgartner/watchtower:main
+    image: patbaumgartner/watchtower:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./.docker/config.json:/config.json:ro

@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Please reproduce against the maintained image before reporting:
-        `patbaumgartner/watchtower:main`. Reports against
+        `patbaumgartner/watchtower:latest`. Reports against
         the retired `containrrr/watchtower` or the old `v2tec` image cannot be acted on here.
 
   - type: textarea

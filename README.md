@@ -30,7 +30,7 @@ docker run --detach \
     --name watchtower \
     --volume /var/run/docker.sock:/var/run/docker.sock \
   --env DOCKER_API_VERSION=1.25 \
-  patbaumgartner/watchtower:main
+  patbaumgartner/watchtower:latest
 ```
 
 Watchtower is intended to be used in homelabs, media centers, local dev environments, and similar. We do **not** recommend using Watchtower in a commercial or production environment. If that is you, you should be looking into using Kubernetes. If that feels like too big a step for you, please look into solutions like [MicroK8s](https://microk8s.io/) and [k3s](https://k3s.io/) that take away a lot of the toil of running a Kubernetes cluster. 
@@ -41,7 +41,7 @@ Images are published to Docker Hub:
 
 | Registry | Image |
 | --- | --- |
-| Docker Hub | `patbaumgartner/watchtower:main` |
+| Docker Hub | `patbaumgartner/watchtower:latest` |
 
 Each tag is a multi-architecture manifest, so `docker pull` selects the right build automatically:
 
@@ -51,7 +51,8 @@ Intel/AMD Synology models resolve to `linux/amd64`; supported ARM models resolve
 The Docker daemon must expose API 1.25 or newer. See
 [Synology and other NAS devices](https://patbaumgartner.github.io/watchtower/usage-overview/#synology-and-other-nas-devices).
 
-The maintained image currently uses the `main` tag. Version and `latest` tags are created only by a release.
+Stable deployments should use `latest` or a version tag such as `2.0.0`. The `main` tag follows development and is
+not recommended for unattended updates.
 
 ## Documentation
 

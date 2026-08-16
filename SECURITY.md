@@ -2,8 +2,7 @@
 
 ## Supported Versions
 
-Security updates are applied to the maintained `main` image until the first stable release. After stable releases
-begin, only the latest release line and `latest` image tag will receive security updates.
+Security updates are applied to the latest release line and the `latest` image tag.
 
 ## Reporting a Vulnerability
 

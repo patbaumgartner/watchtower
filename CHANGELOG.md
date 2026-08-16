@@ -6,6 +6,8 @@ All notable changes to this fork are documented here. This project follows
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-08-16
+
 This is the first release line of `patbaumgartner/watchtower`, a maintained fork of
 [`containrrr/watchtower`](https://github.com/containrrr/watchtower) after the upstream project was retired.
 
@@ -13,7 +15,7 @@ This is the first release line of `patbaumgartner/watchtower`, a maintained fork
 
 - The Go module path is now `github.com/patbaumgartner/watchtower`. Anyone importing this repository as a library
   must update their import paths.
-- Container images moved. Replace `containrrr/watchtower` with `patbaumgartner/watchtower:main` in `docker run`
+- Container images moved. Replace `containrrr/watchtower` with `patbaumgartner/watchtower:latest` in `docker run`
   commands, compose files, and Kubernetes manifests. Flags, Watchtower environment variables, and labels retain their
   existing names.
 - Per-architecture image tags (`amd64-*`, `arm64v8-*`, `armhf-*`, `i386-*`) are gone. Every tag is now a

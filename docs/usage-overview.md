@@ -1,5 +1,5 @@
 Watchtower is itself packaged as a Docker container, so installation is as simple as pulling the
-`patbaumgartner/watchtower:main` image from Docker Hub. Every tag is a multi-architecture manifest, so `docker pull` and
+`patbaumgartner/watchtower:latest` image from Docker Hub. Every tag is a multi-architecture manifest, so `docker pull` and
 `docker run` select the build matching your host — there are no per-architecture tags to choose between.
 
 | Platform | Typical hardware |
@@ -12,7 +12,7 @@ Watchtower is itself packaged as a Docker container, so installation is as simpl
 Images are published to Docker Hub:
 
 ```bash
-docker pull patbaumgartner/watchtower:main
+docker pull patbaumgartner/watchtower:latest
 ```
 
 Since the watchtower code needs to interact with the Docker API in order to monitor the running containers, you need to mount _/var/run/docker.sock_ into the container with the `-v` flag when you run it.
@@ -24,7 +24,7 @@ docker run -d \
   --name watchtower \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -e DOCKER_API_VERSION=1.25 \
-  patbaumgartner/watchtower:main
+  patbaumgartner/watchtower:latest
 ```
 
 ## Synology and other NAS devices
@@ -34,7 +34,7 @@ API 1.25 is intentionally the default because newer Moby clients no longer suppo
 shipped on NAS devices.
 
 1. In Container Manager, open **Registry**, search for `watchtower`, and download
-    `patbaumgartner/watchtower:main`. Container Manager pulls the manifest entry for your NAS CPU automatically.
+    `patbaumgartner/watchtower:latest`. Container Manager pulls the manifest entry for your NAS CPU automatically.
 2. Create a container from the image and add a bind mount from `/var/run/docker.sock` to `/var/run/docker.sock`.
 3. Enable auto-restart so watchtower comes back after a DSM reboot.
 
@@ -43,7 +43,7 @@ Alternatively, use the **Project** feature with this `docker-compose.yml`:
 ```yaml
 services:
   watchtower:
-    image: patbaumgartner/watchtower:main
+    image: patbaumgartner/watchtower:latest
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -74,7 +74,7 @@ docker run -d \
   -e REPO_USER=username \
   -e REPO_PASS=password \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  patbaumgartner/watchtower:main container_to_watch --debug
+  patbaumgartner/watchtower:latest container_to_watch --debug
 ```
 
 Also check out [this Stack Overflow answer](https://stackoverflow.com/a/30494145/7872793) for more options on how to pass environment variables.
@@ -86,7 +86,7 @@ docker run -d \
   --name watchtower \
   -v $HOME/.docker/config.json:/config.json \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  patbaumgartner/watchtower:main container_to_watch --debug
+  patbaumgartner/watchtower:latest container_to_watch --debug
 ```
 
 !!! note "Changes to config.json while running"
@@ -112,7 +112,7 @@ services:
       - "443:3443"
       - "80:3080"
   watchtower:
-    image: patbaumgartner/watchtower:main
+    image: patbaumgartner/watchtower:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /root/.docker/config.json:/config.json

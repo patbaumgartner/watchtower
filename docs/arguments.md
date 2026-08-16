@@ -7,7 +7,7 @@ launching watchtower.
 $ docker run -d \
     --name watchtower \
     -v /var/run/docker.sock:/var/run/docker.sock \
-   patbaumgartner/watchtower:main \
+   patbaumgartner/watchtower:latest \
     nginx redis
 ```
 
@@ -18,7 +18,7 @@ the watchtower container after its execution.
 ```bash
 $ docker run --rm \
     -v /var/run/docker.sock:/var/run/docker.sock \
-   patbaumgartner/watchtower:main \
+   patbaumgartner/watchtower:latest \
     --run-once \
     nginx redis
 ```
