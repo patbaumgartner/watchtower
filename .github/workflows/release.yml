@@ -12,7 +12,7 @@ env:
 
 jobs:
   test:
-    name: Test
+    name: Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -32,7 +32,7 @@ jobs:
       - run: scripts/vulncheck.sh
 
   binaries:
-    name: Binaries
+    name: Release binaries
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -62,7 +62,7 @@ jobs:
             dist/checksums.txt
 
   image:
-    name: Image
+    name: Release container image
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 45

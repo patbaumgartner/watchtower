@@ -1,10 +1,10 @@
-name: Dependabot Auto Merge
+name: Dependabot Auto-merge
 
 on:
   pull_request_target:
     types: [opened, reopened, synchronize, ready_for_review]
   workflow_run:
-    workflows: [CI, CodeQL]
+    workflows: [Continuous Integration, CodeQL Security Analysis]
     types: [completed]
 
 permissions:
@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   prepare:
-    name: Prepare auto merge
+    name: Prepare auto-merge
     if: github.event_name == 'pull_request_target' && github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -134,14 +134,14 @@ jobs:
             }
 
             const requiredChecks = [
-              "Analyze",
+              "CodeQL analysis",
               "Dependency review",
-              "Docs",
-              "Image",
-              "Lint",
-              "Test (macos-latest)",
-              "Test (ubuntu-latest)",
-              "Test (windows-latest)",
+              "Documentation",
+              "Container image",
+              "Lint and static analysis",
+              "Tests (macos-latest)",
+              "Tests (ubuntu-latest)",
+              "Tests (windows-latest)",
               "Vulnerability scan",
             ];
             const checkRuns = await github.paginate(github.rest.checks.listForRef, {

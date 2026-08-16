@@ -1,4 +1,4 @@
-name: CI
+name: Continuous Integration
 
 on:
   push:
@@ -19,7 +19,7 @@ env:
 
 jobs:
   lint:
-    name: Lint
+    name: Lint and static analysis
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -62,7 +62,7 @@ jobs:
           fail-on-severity: high
 
   docs:
-    name: Docs
+    name: Documentation
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -97,7 +97,7 @@ jobs:
       - run: scripts/vulncheck.sh
 
   test:
-    name: Test (${{ matrix.platform }})
+    name: Tests (${{ matrix.platform }})
     strategy:
       fail-fast: false
       matrix:
@@ -122,7 +122,7 @@ jobs:
           if-no-files-found: ignore
 
   image:
-    name: Image
+    name: Container image
     needs: [lint, test, vulncheck]
     runs-on: ubuntu-latest
     timeout-minutes: 45

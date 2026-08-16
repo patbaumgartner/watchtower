@@ -9,7 +9,7 @@
   A container-based solution for automating Docker container base image updates.
   <br/><br/>
   <a href="https://github.com/patbaumgartner/watchtower/actions/workflows/ci.yml">
-    <img alt="CI" src="https://github.com/patbaumgartner/watchtower/actions/workflows/ci.yml/badge.svg?branch=main" />
+    <img alt="Continuous Integration" src="https://github.com/patbaumgartner/watchtower/actions/workflows/ci.yml/badge.svg?branch=main" />
   </a>
   <a href="https://pkg.go.dev/github.com/patbaumgartner/watchtower">
     <img alt="Go Reference" src="https://pkg.go.dev/badge/github.com/patbaumgartner/watchtower.svg" />

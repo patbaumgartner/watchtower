@@ -7,7 +7,7 @@
   A process for automating Docker container base image updates.
   <br/><br/>
 
-  [![CI](https://github.com/patbaumgartner/watchtower/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/patbaumgartner/watchtower/actions/workflows/ci.yml)
+  [![Continuous Integration](https://github.com/patbaumgartner/watchtower/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/patbaumgartner/watchtower/actions/workflows/ci.yml)
   [![Go Reference](https://pkg.go.dev/badge/github.com/patbaumgartner/watchtower.svg)](https://pkg.go.dev/github.com/patbaumgartner/watchtower)
   [![Go Report Card](https://goreportcard.com/badge/github.com/patbaumgartner/watchtower)](https://goreportcard.com/report/github.com/patbaumgartner/watchtower)
   [![latest version](https://img.shields.io/github/v/tag/patbaumgartner/watchtower?label=release)](https://github.com/patbaumgartner/watchtower/releases)
