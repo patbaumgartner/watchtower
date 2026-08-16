@@ -5,6 +5,7 @@
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
+mkdir -p ./docs/assets
 
 goroot=$(go env GOROOT)
 # wasm_exec.js moved from misc/wasm to lib/wasm in Go 1.24.
