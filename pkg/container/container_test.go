@@ -4,9 +4,9 @@ import (
 	"os"
 	"time"
 
-	dc "github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/go-connections/nat"
+	dc "github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/network"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -19,7 +19,7 @@ var _ = Describe("the container", func() {
 
 	BeforeEach(func() {
 		originalAPIVersion, hadOriginalAPIVersion = os.LookupEnv("DOCKER_API_VERSION")
-		Expect(os.Setenv("DOCKER_API_VERSION", "1.25")).To(Succeed())
+		Expect(os.Setenv("DOCKER_API_VERSION", "1.42")).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -77,31 +77,29 @@ var _ = Describe("the container", func() {
 				Expect(c.VerifyConfiguration()).To(Succeed())
 
 				Expect(c.containerInfo.Config.ExposedPorts).To(BeNil())
-				Expect(c.GetCreateConfig().ExposedPorts).To(HaveKey(nat.Port("80/tcp")))
+				Expect(c.GetCreateConfig().ExposedPorts).To(HaveKey(network.MustParsePort("80/tcp")))
 			})
 		})
 		When("verifying a container with port bindings and exposed ports is non-nil", func() {
 			It("should return an error", func() {
 				c := MockContainer(WithPortBindings("80/tcp"))
-				c.containerInfo.Config.ExposedPorts = map[nat.Port]struct{}{"80/tcp": {}}
+				c.containerInfo.Config.ExposedPorts = network.PortSet{network.MustParsePort("80/tcp"): {}}
 				err := c.VerifyConfiguration()
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})
-		DescribeTable("rejecting mount options that cannot be recreated through Docker API 1.25",
+		DescribeTable("rejecting mount options that cannot be recreated through Docker API 1.42",
 			func(containerMount mount.Mount, requiredVersion string) {
 				c := MockContainer(WithPortBindings())
 				c.containerInfo.HostConfig.Mounts = []mount.Mount{containerMount}
 				Expect(c.VerifyConfiguration()).To(MatchError(ContainSubstring("Docker API " + requiredVersion)))
 			},
-			Entry("non-recursive bind mounts", mount.Mount{Target: "/data", BindOptions: &mount.BindOptions{NonRecursive: true}}, "1.40"),
-			Entry("bind mountpoint creation", mount.Mount{Target: "/data", BindOptions: &mount.BindOptions{CreateMountpoint: true}}, "1.42"),
 			Entry("forced recursive read-only bind mounts", mount.Mount{Target: "/data", BindOptions: &mount.BindOptions{ReadOnlyForceRecursive: true}}, "1.44"),
 			Entry("volume subpaths", mount.Mount{Target: "/data", VolumeOptions: &mount.VolumeOptions{Subpath: "child"}}, "1.45"),
 			Entry("image mounts", mount.Mount{Type: mount.TypeImage, Target: "/data"}, "1.48"),
 			Entry("recursive read-only bind mounts", mount.Mount{Type: mount.TypeBind, Target: "/data", ReadOnly: true, BindOptions: &mount.BindOptions{}}, "1.44"),
 		)
-		It("accepts mount options supported by Docker API 1.25", func() {
+		It("accepts mount options supported by Docker API 1.42", func() {
 			c := MockContainer(WithPortBindings())
 			c.containerInfo.HostConfig.Mounts = []mount.Mount{{
 				Type:        mount.TypeBind,
@@ -118,19 +116,26 @@ var _ = Describe("the container", func() {
 			}}
 			Expect(c.VerifyConfiguration()).To(Succeed())
 		})
-		It("rejects modern host and network fields that API 1.25 would discard", func() {
+		It("rejects modern host and network fields that API 1.42 would discard", func() {
 			c := MockContainer(WithPortBindings())
 			c.containerInfo.HostConfig.Annotations = map[string]string{"example": "value"}
 			Expect(c.VerifyConfiguration()).To(MatchError(ContainSubstring("Docker API 1.43")))
 		})
-		It("rejects legacy kernel memory outside its API 1.40 through 1.41 window", func() {
+		DescribeTable("rejecting legacy fields omitted by the split API model",
+			func(legacyConfig legacyContainerConfig, expectedError string) {
+				c := MockContainer(WithPortBindings())
+				c.legacyConfig = legacyConfig
+				Expect(c.VerifyConfiguration()).To(MatchError(ContainSubstring(expectedError)))
+			},
+			Entry("custom MAC address", legacyContainerConfig{macAddress: "02:42:ac:11:00:02"}, "Docker API 1.44"),
+			Entry("kernel memory", legacyContainerConfig{kernelMemory: 1024}, "legacy kernel memory"),
+			Entry("TCP kernel memory", legacyContainerConfig{kernelMemoryTCP: 1024}, "legacy TCP kernel memory"),
+		)
+		It("accepts a legacy custom MAC when endpoint MACs are supported", func() {
+			Expect(os.Setenv("DOCKER_API_VERSION", "1.44")).To(Succeed())
 			c := MockContainer(WithPortBindings())
-			c.containerInfo.HostConfig.KernelMemory = 1024
-			Expect(c.VerifyConfiguration()).To(MatchError(ContainSubstring("Docker API 1.40 or 1.41")))
-			Expect(os.Setenv("DOCKER_API_VERSION", "1.40")).To(Succeed())
+			c.legacyConfig.macAddress = "02:42:ac:11:00:02"
 			Expect(c.VerifyConfiguration()).To(Succeed())
-			Expect(os.Setenv("DOCKER_API_VERSION", "1.42")).To(Succeed())
-			Expect(c.VerifyConfiguration()).To(MatchError(ContainSubstring("Docker API 1.40 or 1.41")))
 		})
 	})
 	Describe("GetCreateConfig", func() {
@@ -179,7 +184,7 @@ var _ = Describe("the container", func() {
 			})
 		})
 		When("container healthcheck has a start interval", func() {
-			It("should reject a custom field unsupported by Docker API 1.25", func() {
+			It("should reject a custom field unsupported by Docker API 1.42", func() {
 				c := MockContainer(WithHealthcheck(dc.HealthConfig{
 					StartInterval: 5,
 				}))

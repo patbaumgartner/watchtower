@@ -5,11 +5,11 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/docker/docker/api"
-	"github.com/docker/docker/api/types/versions"
+	sdkClient "github.com/moby/moby/client"
+	"github.com/moby/moby/client/pkg/versions"
 )
 
-const DefaultAPIVersion = "1.25"
+const DefaultAPIVersion = "1.42"
 
 var apiVersionPattern = regexp.MustCompile(`^[0-9]+\.[0-9]+$`)
 
@@ -31,8 +31,8 @@ func Validate(version string) error {
 	if versions.LessThan(version, DefaultAPIVersion) {
 		return fmt.Errorf("docker API version %s is unsupported: watchtower requires %s or later", version, DefaultAPIVersion)
 	}
-	if versions.GreaterThan(version, api.DefaultVersion) {
-		return fmt.Errorf("docker API version %s is unsupported by the pinned Docker SDK: maximum is %s", version, api.DefaultVersion)
+	if versions.GreaterThan(version, sdkClient.MaxAPIVersion) {
+		return fmt.Errorf("docker API version %s is unsupported by the pinned Docker SDK: maximum is %s", version, sdkClient.MaxAPIVersion)
 	}
 	return nil
 }

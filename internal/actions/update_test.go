@@ -3,10 +3,10 @@ package actions_test
 import (
 	"time"
 
-	dockerContainer "github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/go-connections/nat"
+	dockerContainer "github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/image"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/network"
 	"github.com/patbaumgartner/watchtower/internal/actions"
 	"github.com/patbaumgartner/watchtower/pkg/types"
 
@@ -121,7 +121,7 @@ var _ = Describe("the update action", func() {
 				Expect(report.Skipped()).To(HaveLen(1))
 			})
 		})
-		When("a dependency-restarted container uses configuration unsupported by Docker API 1.25", func() {
+		When("a dependency-restarted container uses configuration unsupported by Docker API 1.42", func() {
 			It("should not stop any container in the update set", func() {
 				testData := getLinkedTestData(true)
 				linked := testData.Containers[1]
@@ -337,7 +337,7 @@ var _ = Describe("the update action", func() {
 										"com.centurylinklabs.watchtower.lifecycle.pre-update-timeout": "190",
 										"com.centurylinklabs.watchtower.lifecycle.pre-update":         "/PreUpdateReturn1.sh",
 									},
-									ExposedPorts: map[nat.Port]struct{}{},
+									ExposedPorts: network.PortSet{},
 								}),
 						},
 					},
@@ -370,7 +370,7 @@ var _ = Describe("the update action", func() {
 										"com.centurylinklabs.watchtower.lifecycle.pre-update-timeout": "190",
 										"com.centurylinklabs.watchtower.lifecycle.pre-update":         "/PreUpdateReturn75.sh",
 									},
-									ExposedPorts: map[nat.Port]struct{}{},
+									ExposedPorts: network.PortSet{},
 								}),
 						},
 					},
@@ -402,7 +402,7 @@ var _ = Describe("the update action", func() {
 										"com.centurylinklabs.watchtower.lifecycle.pre-update-timeout": "190",
 										"com.centurylinklabs.watchtower.lifecycle.pre-update":         "/PreUpdateReturn0.sh",
 									},
-									ExposedPorts: map[nat.Port]struct{}{},
+									ExposedPorts: network.PortSet{},
 								}),
 						},
 					},
@@ -427,7 +427,7 @@ var _ = Describe("the update action", func() {
 					time.Now(),
 					&dockerContainer.Config{
 						Labels:       map[string]string{},
-						ExposedPorts: map[nat.Port]struct{}{},
+						ExposedPorts: network.PortSet{},
 					})
 
 				provider.SetStale(true)
@@ -443,7 +443,7 @@ var _ = Describe("the update action", func() {
 						Labels: map[string]string{
 							"com.centurylinklabs.watchtower.depends-on": "test-container-provider",
 						},
-						ExposedPorts: map[nat.Port]struct{}{},
+						ExposedPorts: network.PortSet{},
 					})
 
 				containers := []types.Container{
@@ -481,7 +481,7 @@ var _ = Describe("the update action", func() {
 										"com.centurylinklabs.watchtower.lifecycle.pre-update-timeout": "190",
 										"com.centurylinklabs.watchtower.lifecycle.pre-update":         "/PreUpdateReturn1.sh",
 									},
-									ExposedPorts: map[nat.Port]struct{}{},
+									ExposedPorts: network.PortSet{},
 								}),
 						},
 					},
@@ -513,7 +513,7 @@ var _ = Describe("the update action", func() {
 										"com.centurylinklabs.watchtower.lifecycle.pre-update-timeout": "190",
 										"com.centurylinklabs.watchtower.lifecycle.pre-update":         "/PreUpdateReturn1.sh",
 									},
-									ExposedPorts: map[nat.Port]struct{}{},
+									ExposedPorts: network.PortSet{},
 								}),
 						},
 					},

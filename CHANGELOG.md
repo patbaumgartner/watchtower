@@ -6,6 +6,17 @@ All notable changes to this fork are documented here. This project follows
 
 ## [Unreleased]
 
+### Breaking
+
+- Docker API 1.25 through 1.41 are no longer supported. The default and minimum is now API 1.42; update any explicit
+  `DOCKER_API_VERSION=1.25` or `--api-version 1.25` setting. Synology Docker Engine 24.0.2 exposes API 1.43 and remains
+  compatible.
+
+### Security
+
+- Replaced `github.com/docker/docker v28.5.2+incompatible` with the maintained split Moby API and client modules,
+  removing the dependency affected by five published Dependabot alerts.
+
 ### Changed
 
 - Release descriptions are generated from the versioned changelog, git commits, and contributor metadata.

@@ -2,6 +2,7 @@
 package container
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -13,10 +14,10 @@ import (
 	wt "github.com/patbaumgartner/watchtower/pkg/types"
 	"github.com/sirupsen/logrus"
 
-	dockercontainer "github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/go-connections/nat"
+	dockercontainer "github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/image"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/network"
 )
 
 // NewContainer returns a new Container instance instantiated with the
@@ -28,6 +29,32 @@ func NewContainer(containerInfo *dockercontainer.InspectResponse, imageInfo *ima
 	}
 }
 
+type legacyContainerConfig struct {
+	macAddress      string
+	kernelMemory    int64
+	kernelMemoryTCP int64
+}
+
+func decodeLegacyContainerConfig(raw json.RawMessage) (legacyContainerConfig, error) {
+	var inspect struct {
+		Config struct {
+			MacAddress string `json:"MacAddress"`
+		} `json:"Config"`
+		HostConfig struct {
+			KernelMemory    int64 `json:"KernelMemory"`
+			KernelMemoryTCP int64 `json:"KernelMemoryTCP"`
+		} `json:"HostConfig"`
+	}
+	if err := json.Unmarshal(raw, &inspect); err != nil {
+		return legacyContainerConfig{}, err
+	}
+	return legacyContainerConfig{
+		macAddress:      inspect.Config.MacAddress,
+		kernelMemory:    inspect.HostConfig.KernelMemory,
+		kernelMemoryTCP: inspect.HostConfig.KernelMemoryTCP,
+	}, nil
+}
+
 // Container represents a running Docker dockercontainer.
 type Container struct {
 	LinkedToRestarting bool
@@ -35,6 +62,7 @@ type Container struct {
 
 	containerInfo *dockercontainer.InspectResponse
 	imageInfo     *image.InspectResponse
+	legacyConfig  legacyContainerConfig
 }
 
 // IsLinkedToRestarting returns the current value of the LinkedToRestarting field for the container
@@ -348,10 +376,10 @@ func (c Container) GetCreateConfig() *dockercontainer.Config {
 
 	// subtract ports exposed in image from container
 	if config.ExposedPorts == nil {
-		config.ExposedPorts = make(map[nat.Port]struct{})
+		config.ExposedPorts = make(network.PortSet)
 	}
 	for k := range config.ExposedPorts {
-		if _, ok := imageConfig.ExposedPorts[string(k)]; ok {
+		if _, ok := imageConfig.ExposedPorts[k.String()]; ok {
 			delete(config.ExposedPorts, k)
 		}
 	}
@@ -410,15 +438,17 @@ func (c Container) VerifyConfiguration() error {
 	if hostConfig == nil {
 		return errorInvalidConfig
 	}
+	if c.legacyConfig.macAddress != "" && !dockercompat.Supports("1.44") {
+		return fmt.Errorf("container configures a legacy custom MAC address, which requires Docker API 1.44 or later for safe recreation")
+	}
+	if c.legacyConfig.kernelMemory != 0 {
+		return fmt.Errorf("container configures legacy kernel memory, which cannot be recreated with Docker API 1.42 or later")
+	}
+	if c.legacyConfig.kernelMemoryTCP != 0 {
+		return fmt.Errorf("container configures legacy TCP kernel memory, which cannot be recreated by the current Docker client")
+	}
 	if containerConfig.Healthcheck != nil && containerConfig.Healthcheck.StartInterval != 0 && !dockercompat.Supports("1.44") {
 		return fmt.Errorf("container healthcheck uses a start interval, which requires Docker API 1.44 or later")
-	}
-	if hostConfig.KernelMemory != 0 && (dockercompat.Supports("1.42") || !dockercompat.Supports("1.40")) {
-		return fmt.Errorf("container configures kernel memory, which requires Docker API 1.40 or 1.41")
-	}
-	//lint:ignore SA1019 API 1.25 preflight must detect this field before Docker silently clears it.
-	if hostConfig.KernelMemoryTCP != 0 && !dockercompat.Supports("1.40") {
-		return fmt.Errorf("container configures TCP kernel memory, which requires Docker API 1.40 or later")
 	}
 	if hostConfig.ConsoleSize != [2]uint{} && !dockercompat.Supports("1.42") {
 		return fmt.Errorf("container configures console size, which requires Docker API 1.42 or later")

@@ -23,15 +23,14 @@ Run the `watchtower` container with the following command:
 docker run -d \
   --name watchtower \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  -e DOCKER_API_VERSION=1.25 \
+  -e DOCKER_API_VERSION=1.42 \
   patbaumgartner/watchtower:latest
 ```
 
 ## Synology and other NAS devices
 
-Watchtower supports Synology DSM 7 via **Container Manager** when its Docker daemon exposes API 1.25 or newer.
-API 1.25 is intentionally the default because newer Moby clients no longer support the older daemon versions commonly
-shipped on NAS devices.
+Watchtower supports Synology DSM 7 via **Container Manager** when its Docker daemon exposes API 1.42 or newer.
+Docker Engine 24.0.2 exposes API 1.43 and is compatible with the default API 1.42 setting.
 
 1. In Container Manager, open **Registry**, search for `watchtower`, and download
     `patbaumgartner/watchtower:latest`. Container Manager pulls the manifest entry for your NAS CPU automatically.
@@ -52,7 +51,7 @@ services:
       - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_LABEL_ENABLE=true
       - WATCHTOWER_SCHEDULE=0 0 4 * * *
-      - DOCKER_API_VERSION=1.25
+      - DOCKER_API_VERSION=1.42
 ```
 
 !!! note "DSM package updates are not managed"

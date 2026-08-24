@@ -29,7 +29,7 @@ Watchtower will pull down your new image, gracefully shut down your existing con
 docker run --detach \
     --name watchtower \
     --volume /var/run/docker.sock:/var/run/docker.sock \
-  --env DOCKER_API_VERSION=1.25 \
+  --env DOCKER_API_VERSION=1.42 \
   patbaumgartner/watchtower:latest
 ```
 
@@ -48,7 +48,7 @@ Each tag is a multi-architecture manifest, so `docker pull` selects the right bu
 `linux/amd64`, `linux/arm64`, `linux/arm/v7`, `linux/386`
 
 Intel/AMD Synology models resolve to `linux/amd64`; supported ARM models resolve to `linux/arm64` or `linux/arm/v7`.
-The Docker daemon must expose API 1.25 or newer. See
+The Docker daemon must expose API 1.42 or newer. See
 [Synology and other NAS devices](https://patbaumgartner.github.io/watchtower/usage-overview/#synology-and-other-nas-devices).
 
 Stable deployments should use `latest` or a version tag such as `2.0.0`. The `main` tag follows development and is

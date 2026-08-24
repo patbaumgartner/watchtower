@@ -37,10 +37,7 @@ updates:
         patterns: ["*"]
         update-types: ["minor", "patch"]
     ignore:
-      # Docker SDK v29 moved to github.com/moby/moby/client and requires API 1.40.
-      # Keep v28 while Synology compatibility requires Docker API 1.25.
-      - dependency-name: "github.com/docker/docker"
-        update-types: ["version-update:semver-major"]
+      # Docker CLI major upgrades require a compatibility review.
       - dependency-name: "github.com/docker/cli"
         update-types: ["version-update:semver-major"]
 

@@ -4,17 +4,17 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/docker/docker/api/types/network"
+	"github.com/moby/moby/api/types/network"
 	"time"
 
 	"github.com/patbaumgartner/watchtower/pkg/container/mocks"
 	"github.com/patbaumgartner/watchtower/pkg/filters"
 	t "github.com/patbaumgartner/watchtower/pkg/types"
 
-	dockerContainer "github.com/docker/docker/api/types/container"
+	dockerContainer "github.com/moby/moby/api/types/container"
 
 	cerrdefs "github.com/containerd/errdefs"
-	cli "github.com/docker/docker/client"
+	cli "github.com/moby/moby/client"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/ghttp"
 	"github.com/sirupsen/logrus"
@@ -27,6 +27,8 @@ import (
 	"net/http"
 )
 
+var testHardwareAddress = network.HardwareAddr{0x02, 0x42, 0xac, 0x11, 0x00, 0x02}
+
 var _ = Describe("the client", func() {
 	var docker *cli.Client
 	var mockServer *ghttp.Server
@@ -34,7 +36,8 @@ var _ = Describe("the client", func() {
 		mockServer = ghttp.NewServer()
 		docker, _ = cli.NewClientWithOpts(
 			cli.WithHost(mockServer.URL()),
-			cli.WithHTTPClient(mockServer.HTTPTestServer.Client()))
+			cli.WithHTTPClient(mockServer.HTTPTestServer.Client()),
+			cli.WithAPIVersion("1.42"))
 	})
 	AfterEach(func() {
 		mockServer.Close()
@@ -140,12 +143,12 @@ var _ = Describe("the client", func() {
 			})
 		})
 	})
-	Describe("API 1.25 container recreation", func() {
+	Describe("API 1.42 container recreation", func() {
 		It("should preserve AutoRemove and StopTimeout in the create request", func() {
-			api25, err := cli.NewClientWithOpts(
+			api42, err := cli.New(
 				cli.WithHost(mockServer.URL()),
 				cli.WithHTTPClient(mockServer.HTTPTestServer.Client()),
-				cli.WithVersion("1.25"),
+				cli.WithAPIVersion("1.42"),
 			)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -170,12 +173,40 @@ var _ = Describe("the client", func() {
 				Expect(json.NewEncoder(response).Encode(dockerContainer.CreateResponse{ID: "new-container"})).To(Succeed())
 			})
 
-			client := dockerClient{api: api25}
+			client := dockerClient{api: api42}
 			_, err = client.StartContainer(container)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 	When("listing containers", func() {
+		It("carries raw legacy inspect fields into recreation preflight", func() {
+			mockServer.AppendHandlers(
+				ghttp.CombineHandlers(
+					ghttp.VerifyRequest(http.MethodGet, HaveSuffix("/containers/legacy/json")),
+					ghttp.RespondWith(http.StatusOK, []byte(`{
+						"Id":"legacy","Image":"image","Name":"/legacy","State":{"Running":true},
+						"Config":{"Image":"example:latest","Labels":{},"MacAddress":"02:42:ac:11:00:02"},
+						"HostConfig":{"NetworkMode":"default","PortBindings":{},"KernelMemory":1024,"KernelMemoryTCP":2048},
+						"NetworkSettings":{"Networks":{}}
+					}`)),
+				),
+				ghttp.CombineHandlers(
+					ghttp.VerifyRequest(http.MethodGet, HaveSuffix("/images/image/json")),
+					ghttp.RespondWith(http.StatusOK, []byte(`{"Id":"image","Config":{}}`)),
+				),
+			)
+
+			inspected, err := (dockerClient{api: docker}).GetContainer("legacy")
+			Expect(err).NotTo(HaveOccurred())
+			concrete, ok := inspected.(*Container)
+			Expect(ok).To(BeTrue())
+			Expect(concrete.legacyConfig).To(Equal(legacyContainerConfig{
+				macAddress:      "02:42:ac:11:00:02",
+				kernelMemory:    1024,
+				kernelMemoryTCP: 2048,
+			}))
+			Expect(inspected.VerifyConfiguration()).To(MatchError(ContainSubstring("Docker API 1.44")))
+		})
 		When("no filter is provided", func() {
 			It("should return all available containers", func() {
 				mockServer.AppendHandlers(mocks.ListContainersHandler("running"))
@@ -307,10 +338,9 @@ var _ = Describe("the client", func() {
 					// API.ContainerExecCreate
 					ghttp.CombineHandlers(
 						ghttp.VerifyRequest("POST", HaveSuffix("containers/%v/exec", containerID)),
-						ghttp.VerifyJSONRepresenting(dockerContainer.ExecOptions{
-							User:   user,
-							Detach: false,
-							Tty:    true,
+						ghttp.VerifyJSONRepresenting(dockerContainer.ExecCreateRequest{
+							User: user,
+							Tty:  true,
 							Cmd: []string{
 								"sh",
 								"-c",
@@ -323,7 +353,7 @@ var _ = Describe("the client", func() {
 					// intentionally makes the mock fail the connection upgrade.
 					ghttp.CombineHandlers(
 						ghttp.VerifyRequest("POST", HaveSuffix("exec/%v/start", execID)),
-						ghttp.VerifyJSONRepresenting(dockerContainer.ExecStartOptions{
+						ghttp.VerifyJSONRepresenting(dockerContainer.ExecStartRequest{
 							Detach: false,
 							Tty:    true,
 						}),
@@ -348,13 +378,13 @@ var _ = Describe("the client", func() {
 
 				aliases := []string{"One", "Two", container.ID().ShortID(), "Four"}
 				endpoints := map[string]*network.EndpointSettings{
-					`test`: {Aliases: aliases, MacAddress: "02:42:ac:11:00:02"},
+					`test`: {Aliases: aliases, MacAddress: testHardwareAddress},
 				}
 				container.containerInfo.NetworkSettings = &dockerContainer.NetworkSettings{Networks: endpoints}
 				Expect(container.ContainerInfo().NetworkSettings.Networks[`test`].Aliases).To(Equal(aliases))
 				Expect(client.GetNetworkConfig(container).EndpointsConfig[`test`].Aliases).To(Equal([]string{"One", "Two", "Four"}))
 				Expect(client.GetNetworkConfig(container).EndpointsConfig[`test`].MacAddress).To(BeEmpty())
-				Expect(container.ContainerInfo().NetworkSettings.Networks[`test`].MacAddress).To(Equal("02:42:ac:11:00:02"))
+				Expect(container.ContainerInfo().NetworkSettings.Networks[`test`].MacAddress).To(Equal(testHardwareAddress))
 			})
 		})
 		When(`a compatible API is explicitly selected`, func() {
@@ -371,10 +401,10 @@ var _ = Describe("the client", func() {
 				client := dockerClient{}
 				container := MockContainer(WithImageName("docker.io/prefix/imagename:latest"))
 				container.containerInfo.NetworkSettings = &dockerContainer.NetworkSettings{Networks: map[string]*network.EndpointSettings{
-					`test`: {MacAddress: "02:42:ac:11:00:02"},
+					`test`: {MacAddress: testHardwareAddress},
 				}}
 
-				Expect(client.GetNetworkConfig(container).EndpointsConfig[`test`].MacAddress).To(Equal("02:42:ac:11:00:02"))
+				Expect(client.GetNetworkConfig(container).EndpointsConfig[`test`].MacAddress).To(Equal(testHardwareAddress))
 			})
 			It(`should clear the running watchtower MAC to avoid a self-update collision`, func() {
 				original, present := os.LookupEnv("DOCKER_API_VERSION")
@@ -392,7 +422,7 @@ var _ = Describe("the client", func() {
 					WithLabels(map[string]string{"com.centurylinklabs.watchtower": "true"}),
 				)
 				container.containerInfo.NetworkSettings = &dockerContainer.NetworkSettings{Networks: map[string]*network.EndpointSettings{
-					`test`: {MacAddress: "02:42:ac:11:00:02"},
+					`test`: {MacAddress: testHardwareAddress},
 				}}
 
 				Expect(client.GetNetworkConfig(container).EndpointsConfig[`test`].MacAddress).To(BeEmpty())

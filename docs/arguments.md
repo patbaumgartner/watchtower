@@ -166,15 +166,14 @@ Environment Variable: DOCKER_HOST
 ```
 
 ## Docker API version
-The exact API version used by the Docker client. The default and minimum supported version is 1.25 for compatibility
-with older Docker daemons used by Synology DSM. Docker SDK v28 supports up to API 1.51. Set a newer version only when
-the target daemon supports it.
+The exact API version used by the Docker client. The default and minimum supported version is 1.42. The pinned Moby
+client supports up to API 1.55. Set a newer version only when the target daemon supports it.
 
 ```text
             Argument: --api-version, -a
 Environment Variable: DOCKER_API_VERSION
                 Type: String
-             Default: "1.25"
+             Default: "1.42"
 ```
 
 ## Include restarting

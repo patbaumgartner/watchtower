@@ -14,5 +14,5 @@ List the commands or manual checks you ran.
 
 - [ ] Tests cover the changed behavior.
 - [ ] Documentation and examples match the implementation.
-- [ ] Docker API 1.25 and Synology compatibility are preserved, or the compatibility impact is documented.
+- [ ] Docker API 1.42 and Synology compatibility are preserved, or the compatibility impact is documented.
 - [ ] Dependency and image references remain pinned to immutable versions or digests.

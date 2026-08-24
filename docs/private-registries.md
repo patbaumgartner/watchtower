@@ -139,7 +139,7 @@ services:
     environment:
       PATH: /credential-helpers
       AWS_REGION: us-west-1
-      DOCKER_API_VERSION: "1.25"
+      DOCKER_API_VERSION: "1.42"
 ```
 
 Use an EC2 instance role where possible. If static AWS credentials are unavoidable, supply them through a secret

@@ -52,7 +52,7 @@ func TestEnvConfig_Custom(t *testing.T) {
 }
 
 func TestEnvConfig_InvalidAPIVersion(t *testing.T) {
-	for _, version := range []string{"1.24", "1.52", "latest"} {
+	for _, version := range []string{"1.41", "1.56", "latest"} {
 		t.Run(version, func(t *testing.T) {
 			viper.Reset()
 			t.Cleanup(viper.Reset)
