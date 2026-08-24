@@ -3,9 +3,13 @@ name: Dependabot Auto-merge
 on:
   pull_request_target:
     types: [opened, reopened, synchronize, ready_for_review]
-  workflow_run:
-    workflows: [Continuous Integration, CodeQL Security Analysis]
-    types: [completed]
+  # GitHub treats workflow runs triggered by Dependabot pull requests as though
+  # they came from a fork, and in practice this prevents `workflow_run` from ever
+  # firing off the completion of Continuous Integration/CodeQL on those branches.
+  # Poll on a schedule instead so labeled PRs still get merged once checks pass.
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {}
 
 permissions:
   checks: read
@@ -14,7 +18,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: dependabot-auto-merge-${{ github.event.pull_request.number || github.event.workflow_run.head_sha }}
+  group: dependabot-auto-merge-${{ github.event.pull_request.number || github.event_name }}
   cancel-in-progress: true
 
 jobs:
@@ -84,52 +88,37 @@ jobs:
 
   merge:
     name: Merge verified update
-    if: github.event_name == 'workflow_run'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Merge after all required checks succeed
+      - name: Merge every eligible, labeled Dependabot PR
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const { owner, repo } = context.repo;
-            const workflowSha = context.payload.workflow_run.head_sha;
-            const associated = await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, {
+
+            const openPulls = await github.paginate(github.rest.pulls.list, {
               owner,
               repo,
-              commit_sha: workflowSha,
+              state: "open",
               per_page: 100,
             });
-            const pr = associated.find(
-              (candidate) => candidate.state === "open" &&
-                candidate.user.login === "dependabot[bot]" &&
+            const candidates = openPulls.filter(
+              (candidate) => candidate.user.login === "dependabot[bot]" &&
                 candidate.labels.some((label) => label.name === "automerge")
             );
-            if (!pr) return;
-            const sha = pr.head.sha;
 
-            const commits = await github.paginate(github.rest.pulls.listCommits, {
-              owner,
-              repo,
-              pull_number: pr.number,
-              per_page: 100,
-            });
-            const untrusted = commits.filter(
-              (commit) => commit.author?.login !== "dependabot[bot]" || commit.commit.verification?.verified !== true
-            );
-            if (untrusted.length > 0) {
-              core.setFailed("Dependabot branch contains a commit that is not verified and Dependabot-authored.");
-              return;
-            }
-
-            const { data: branch } = await github.rest.repos.getBranch({ owner, repo, branch: pr.base.ref });
-            const { data: comparison } = await github.rest.repos.compareCommitsWithBasehead({
-              owner,
-              repo,
-              basehead: `${branch.commit.sha}...${sha}`,
-            });
-            if (comparison.behind_by > 0) {
-              core.info(`Pull request #${pr.number} is behind ${pr.base.ref}; waiting for Dependabot to rebase it.`);
+            const { data: repository } = await github.rest.repos.get({ owner, repo });
+            const merge_method = repository.allow_squash_merge
+              ? "squash"
+              : repository.allow_rebase_merge
+                ? "rebase"
+                : repository.allow_merge_commit
+                  ? "merge"
+                  : null;
+            if (!merge_method) {
+              core.setFailed("No merge method is enabled for this repository.");
               return;
             }
 
@@ -144,43 +133,62 @@ jobs:
               "Tests (windows-latest)",
               "Vulnerability scan",
             ];
-            const checkRuns = await github.paginate(github.rest.checks.listForRef, {
-              owner,
-              repo,
-              ref: sha,
-              per_page: 100,
-            });
-            const trustedChecks = new Map(
-              checkRuns
-                .filter((run) => run.app?.slug === "github-actions")
-                .map((run) => [run.name, run])
-            );
-            const incomplete = requiredChecks.filter(
-              (name) => !trustedChecks.has(name) ||
-                trustedChecks.get(name).status !== "completed" ||
-                trustedChecks.get(name).conclusion !== "success"
-            );
-            if (incomplete.length > 0) {
-              core.info(`Waiting for successful GitHub Actions checks: ${incomplete.join(", ")}`);
-              return;
-            }
 
-            const { data: repository } = await github.rest.repos.get({ owner, repo });
-            const merge_method = repository.allow_squash_merge
-              ? "squash"
-              : repository.allow_rebase_merge
-                ? "rebase"
-                : repository.allow_merge_commit
-                  ? "merge"
-                  : null;
-            if (!merge_method) {
-              core.setFailed("No merge method is enabled for this repository.");
-              return;
+            for (const pr of candidates) {
+              const sha = pr.head.sha;
+
+              const commits = await github.paginate(github.rest.pulls.listCommits, {
+                owner,
+                repo,
+                pull_number: pr.number,
+                per_page: 100,
+              });
+              const untrusted = commits.filter(
+                (commit) => commit.author?.login !== "dependabot[bot]" || commit.commit.verification?.verified !== true
+              );
+              if (untrusted.length > 0) {
+                core.warning(`Pull request #${pr.number} contains a commit that is not verified and Dependabot-authored; skipping.`);
+                continue;
+              }
+
+              const { data: branch } = await github.rest.repos.getBranch({ owner, repo, branch: pr.base.ref });
+              const { data: comparison } = await github.rest.repos.compareCommitsWithBasehead({
+                owner,
+                repo,
+                basehead: `${branch.commit.sha}...${sha}`,
+              });
+              if (comparison.behind_by > 0) {
+                core.info(`Pull request #${pr.number} is behind ${pr.base.ref}; waiting for Dependabot to rebase it.`);
+                continue;
+              }
+
+              const checkRuns = await github.paginate(github.rest.checks.listForRef, {
+                owner,
+                repo,
+                ref: sha,
+                per_page: 100,
+              });
+              const trustedChecks = new Map(
+                checkRuns
+                  .filter((run) => run.app?.slug === "github-actions")
+                  .map((run) => [run.name, run])
+              );
+              const incomplete = requiredChecks.filter(
+                (name) => !trustedChecks.has(name) ||
+                  trustedChecks.get(name).status !== "completed" ||
+                  trustedChecks.get(name).conclusion !== "success"
+              );
+              if (incomplete.length > 0) {
+                core.info(`Pull request #${pr.number} is waiting for successful GitHub Actions checks: ${incomplete.join(", ")}`);
+                continue;
+              }
+
+              await github.rest.pulls.merge({
+                owner,
+                repo,
+                pull_number: pr.number,
+                merge_method,
+                sha,
+              });
+              core.info(`Merged pull request #${pr.number}.`);
             }
-            await github.rest.pulls.merge({
-              owner,
-              repo,
-              pull_number: pr.number,
-              merge_method,
-              sha,
-            });
