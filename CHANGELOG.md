@@ -28,8 +28,8 @@ All notable changes to this fork are documented here. This project follows
 - Sorting containers by creation date no longer misorders containers whose creation timestamp cannot be parsed;
   this also affects which instance is kept when multiple Watchtower instances are cleaned up.
 - Cleaning up excess Watchtower instances no longer crashes when the image of an old instance cannot be inspected.
-- When a replacement container is created but its networks cannot be attached, the error now names the container
-  that was left behind in the created state so it can be started or removed manually.
+- When a replacement container is created but its networks cannot be attached, the container is removed so its name
+  stays free for the next update attempt, and the error names the affected container and network.
 - `build.sh` now aborts on errors and embeds a fallback version instead of an empty one when `git describe` fails.
 
 ## [2.0.0] - 2026-08-16

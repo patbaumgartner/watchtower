@@ -178,6 +178,39 @@ var _ = Describe("the client", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
+	Describe("failed network configuration during recreation", func() {
+		It("removes the created container and returns the cause", func() {
+			container := MockContainer(WithImageName("docker.io/prefix/imagename:latest"))
+			container.containerInfo.State = &dockerContainer.State{}
+			container.containerInfo.NetworkSettings = &dockerContainer.NetworkSettings{
+				Networks: map[string]*network.EndpointSettings{
+					"test-network": {},
+				},
+			}
+
+			removed := false
+			mockServer.AppendHandlers(
+				ghttp.CombineHandlers(
+					ghttp.VerifyRequest(http.MethodPost, HaveSuffix("/containers/create")),
+					ghttp.RespondWithJSONEncoded(http.StatusCreated, dockerContainer.CreateResponse{ID: "created-id"}),
+				),
+				ghttp.CombineHandlers(
+					ghttp.VerifyRequest(http.MethodPost, HaveSuffix("/networks/test-network/disconnect")),
+					ghttp.RespondWith(http.StatusInternalServerError, `{"message": "simulated network failure"}`),
+				),
+				ghttp.CombineHandlers(
+					ghttp.VerifyRequest(http.MethodDelete, HaveSuffix("/containers/created-id")),
+					func(http.ResponseWriter, *http.Request) { removed = true },
+					ghttp.RespondWith(http.StatusNoContent, nil),
+				),
+			)
+
+			client := dockerClient{api: docker}
+			_, err := client.StartContainer(container)
+			Expect(err).To(MatchError(ContainSubstring("could not be configured and was removed")))
+			Expect(removed).To(BeTrue())
+		})
+	})
 	When("listing containers", func() {
 		It("carries raw legacy inspect fields into recreation preflight", func() {
 			mockServer.AppendHandlers(

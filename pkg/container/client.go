@@ -296,13 +296,24 @@ func (client dockerClient) StartContainer(c t.Container) (t.ContainerID, error) 
 
 	if !(hostConfig.NetworkMode.IsHost()) {
 
+		// The new container is unusable if its networks cannot be configured; remove it so the
+		// name is freed and the next update attempt starts from a clean slate.
+		failCreated := func(cause error) error {
+			shortID := t.ContainerID(createdContainer.ID).ShortID()
+			if _, rmErr := client.api.ContainerRemove(bg, createdContainer.ID, sdkClient.ContainerRemoveOptions{Force: true}); rmErr != nil {
+				log.WithError(rmErr).Warnf("Failed to remove partially created container %s (%s)", name, shortID)
+				return fmt.Errorf("new container %s (%s) was created but not started: %w; removing it failed, remove it manually before the next update", name, shortID, cause)
+			}
+			return fmt.Errorf("new container %s (%s) could not be configured and was removed: %w", name, shortID, cause)
+		}
+
 		for k := range simpleNetworkConfig.EndpointsConfig {
 			_, err = client.api.NetworkDisconnect(bg, k, sdkClient.NetworkDisconnectOptions{
 				Container: createdContainer.ID,
 				Force:     true,
 			})
 			if err != nil {
-				return "", fmt.Errorf("new container %s (%s) was created but not started: disconnecting network %q failed: %w", name, t.ContainerID(createdContainer.ID).ShortID(), k, err)
+				return "", failCreated(fmt.Errorf("disconnecting network %q failed: %w", k, err))
 			}
 		}
 
@@ -312,7 +323,7 @@ func (client dockerClient) StartContainer(c t.Container) (t.ContainerID, error) 
 				EndpointConfig: v,
 			})
 			if err != nil {
-				return "", fmt.Errorf("new container %s (%s) was created but not started: connecting network %q failed: %w", name, t.ContainerID(createdContainer.ID).ShortID(), k, err)
+				return "", failCreated(fmt.Errorf("connecting network %q failed: %w", k, err))
 			}
 		}
 

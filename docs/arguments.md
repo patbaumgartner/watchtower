@@ -27,6 +27,10 @@ In the example above, watchtower will execute an upgrade attempt on the containe
 
 When no arguments are specified, watchtower will monitor all running containers.
 
+This page covers the general arguments. Notification flags (`--notification-url`, `--notifications-level`, and the
+service-specific settings) are documented on the [notifications](notifications.md) page, and the lifecycle-hook flags
+(`--enable-lifecycle-hooks` and the hook labels) on the [lifecycle hooks](lifecycle-hooks.md) page.
+
 ## Secrets/Files
 
 Some arguments can also reference a file, in which case the contents of the file are used as the value.
@@ -447,6 +451,9 @@ Returns a success exit code to enable usage with docker `HEALTHCHECK`. This chec
 
 ```text
             Argument: --health-check
+Environment Variable: no environment variable (command-line only)
+                Type: Boolean
+             Default: false
 ```
 
 ## Programatic Output (porcelain)
