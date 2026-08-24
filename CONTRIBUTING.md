@@ -4,7 +4,7 @@
 
 To contribute code changes to this project you will need:
 
-- [Go](https://golang.org/doc/install) 1.26.6 or newer
+- [Go](https://golang.org/doc/install) 1.27.0 or newer
 - `jq`, ShellCheck, and Staticcheck for the same checks CI runs
 - [Docker](https://docs.docker.com/engine/installation/) with Buildx, if you want to build images
 

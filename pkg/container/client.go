@@ -207,8 +207,9 @@ func (client dockerClient) StopContainer(c t.Container, timeout time.Duration) e
 		}
 	}
 
-	// TODO: This should probably be checked.
-	_ = client.waitForStopOrTimeout(c, timeout)
+	if err := client.waitForStopOrTimeout(c, timeout); err != nil {
+		log.WithError(err).Debugf("Failed to check whether container %s stopped; removing it anyway", shortID)
+	}
 
 	if c.ContainerInfo().HostConfig.AutoRemove {
 		log.Debugf("AutoRemove container %s, skipping ContainerRemove call.", shortID)
@@ -301,7 +302,7 @@ func (client dockerClient) StartContainer(c t.Container) (t.ContainerID, error) 
 				Force:     true,
 			})
 			if err != nil {
-				return "", err
+				return "", fmt.Errorf("new container %s (%s) was created but not started: disconnecting network %q failed: %w", name, t.ContainerID(createdContainer.ID).ShortID(), k, err)
 			}
 		}
 
@@ -311,7 +312,7 @@ func (client dockerClient) StartContainer(c t.Container) (t.ContainerID, error) 
 				EndpointConfig: v,
 			})
 			if err != nil {
-				return "", err
+				return "", fmt.Errorf("new container %s (%s) was created but not started: connecting network %q failed: %w", name, t.ContainerID(createdContainer.ID).ShortID(), k, err)
 			}
 		}
 

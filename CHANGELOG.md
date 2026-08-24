@@ -21,6 +21,17 @@ All notable changes to this fork are documented here. This project follows
 
 - Release descriptions are generated from the versioned changelog, git commits, and contributor metadata.
 
+### Fixed
+
+- A failure to rename the running Watchtower container during a self-update is now reported as a failed update
+  instead of being silently swallowed and reported as a success.
+- Sorting containers by creation date no longer misorders containers whose creation timestamp cannot be parsed;
+  this also affects which instance is kept when multiple Watchtower instances are cleaned up.
+- Cleaning up excess Watchtower instances no longer crashes when the image of an old instance cannot be inspected.
+- When a replacement container is created but its networks cannot be attached, the error now names the container
+  that was left behind in the created state so it can be started or removed manually.
+- `build.sh` now aborts on errors and embeds a fallback version instead of an empty one when `git describe` fails.
+
 ## [2.0.0] - 2026-08-16
 
 This is the first release line of `patbaumgartner/watchtower`, a maintained fork of

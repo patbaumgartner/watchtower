@@ -1,6 +1,7 @@
 package actions_test
 
 import (
+	"errors"
 	"time"
 
 	dockerContainer "github.com/moby/moby/api/types/container"
@@ -527,5 +528,36 @@ var _ = Describe("the update action", func() {
 
 		})
 
+	})
+
+	When("renaming the watchtower instance fails during self-update", func() {
+		It("should report the update as failed and not start a replacement", func() {
+			client := CreateMockClient(
+				&TestData{
+					RenameContainerError: errors.New("simulated rename failure"),
+					Containers: []types.Container{
+						CreateMockContainerWithConfig(
+							"watchtower",
+							"watchtower",
+							"watchtower-image:latest",
+							true,
+							false,
+							time.Now(),
+							&dockerContainer.Config{
+								Labels: map[string]string{
+									"com.centurylinklabs.watchtower": "true",
+								},
+								ExposedPorts: network.PortSet{},
+							}),
+					},
+				},
+				false,
+				false,
+			)
+			report, err := actions.Update(client, types.UpdateParams{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(report.Failed()).To(HaveLen(1))
+			Expect(client.TestData.TriedToStartCount).To(Equal(0))
+		})
 	})
 })
