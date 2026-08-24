@@ -43,7 +43,7 @@ jobs:
         # Built from source so it is compiled with GO_VERSION; released binaries lag
         # behind and refuse to analyse a module requiring a newer Go than they were built with.
         run: |
-          go install honnef.co/go/tools/cmd/staticcheck@v0.7.0
+          go install honnef.co/go/tools/cmd/staticcheck@v0.8.1
           staticcheck ./...
       - name: Shellcheck
         run: shellcheck scripts/*.sh build.sh

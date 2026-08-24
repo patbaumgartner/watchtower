@@ -34,7 +34,7 @@ var _ = Describe("the client", func() {
 	var mockServer *ghttp.Server
 	BeforeEach(func() {
 		mockServer = ghttp.NewServer()
-		docker, _ = cli.NewClientWithOpts(
+		docker, _ = cli.New(
 			cli.WithHost(mockServer.URL()),
 			cli.WithHTTPClient(mockServer.HTTPTestServer.Client()),
 			cli.WithAPIVersion("1.42"))
