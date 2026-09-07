@@ -10,9 +10,9 @@ func TestValidate(t *testing.T) {
 	}{
 		{name: "minimum", version: "1.42", valid: true},
 		{name: "newer", version: "1.44", valid: true},
-		{name: "client maximum", version: "1.55", valid: true},
+		{name: "client maximum", version: MaxAPIVersion, valid: true},
 		{name: "below minimum", version: "1.41", valid: false},
-		{name: "above client maximum", version: "1.56", valid: false},
+		{name: "above client maximum", version: "99.99", valid: false},
 		{name: "empty", version: "", valid: false},
 		{name: "malformed", version: "latest", valid: false},
 	}

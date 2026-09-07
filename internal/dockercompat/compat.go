@@ -11,6 +11,9 @@ import (
 
 const DefaultAPIVersion = "1.42"
 
+// MaxAPIVersion is the highest Docker API version the pinned SDK can speak.
+const MaxAPIVersion = sdkClient.MaxAPIVersion
+
 var apiVersionPattern = regexp.MustCompile(`^[0-9]+\.[0-9]+$`)
 
 func ConfiguredAPIVersion() string {
@@ -31,8 +34,8 @@ func Validate(version string) error {
 	if versions.LessThan(version, DefaultAPIVersion) {
 		return fmt.Errorf("docker API version %s is unsupported: watchtower requires %s or later", version, DefaultAPIVersion)
 	}
-	if versions.GreaterThan(version, sdkClient.MaxAPIVersion) {
-		return fmt.Errorf("docker API version %s is unsupported by the pinned Docker SDK: maximum is %s", version, sdkClient.MaxAPIVersion)
+	if versions.GreaterThan(version, MaxAPIVersion) {
+		return fmt.Errorf("docker API version %s is unsupported by the pinned Docker SDK: maximum is %s", version, MaxAPIVersion)
 	}
 	return nil
 }
