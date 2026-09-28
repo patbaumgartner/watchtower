@@ -30,7 +30,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 FROM --platform=$BUILDPLATFORM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS certs
 # Package versions are coupled to this Alpine release and must remain exact.
-RUN apk add --no-cache ca-certificates=20260611-r0 tzdata=2026c-r0
+RUN apk add --no-cache ca-certificates=20260909-r0 tzdata=2026d-r0
 
 FROM scratch
 
