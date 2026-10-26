@@ -1,7 +1,7 @@
 module github.com/patbaumgartner/watchtower
 
-// go1.27.2 picks up the stdlib fix for GO-2026-6617 (HTTP/2 HPACK encoder race).
-go 1.27.2
+// go1.27.3 picks up the stdlib fix for GO-2026-6711 (crypto/x509: CA distrust mitigation).
+go 1.27.3
 
 require (
 	github.com/containerd/errdefs v1.0.0
