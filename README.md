@@ -51,7 +51,7 @@ Intel/AMD Synology models resolve to `linux/amd64`; supported ARM models resolve
 The Docker daemon must expose API 1.42 or newer. See
 [Synology and other NAS devices](https://patbaumgartner.github.io/watchtower/usage-overview/#synology-and-other-nas-devices).
 
-Stable deployments should use `latest` or a version tag such as `2.0.0`. The `main` tag follows development and is
+Stable deployments should use `latest` or a version tag such as `2.1.0`. The `main` tag follows development and is
 not recommended for unattended updates.
 
 ## Documentation
