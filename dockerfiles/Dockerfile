@@ -29,8 +29,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     -o /out/watchtower .
 
 FROM --platform=$BUILDPLATFORM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS certs
-# Package versions are coupled to this Alpine release and must remain exact.
-RUN apk add --no-cache ca-certificates=20260909-r0 tzdata=2026e-r0
+# Exact package pins broke when Alpine 3.24 shipped newer package versions
+# (ca-certificates 20261020-r0). Track the repo versions instead.
+RUN apk add --no-cache ca-certificates tzdata
 
 FROM scratch
 
