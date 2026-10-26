@@ -6,6 +6,8 @@ All notable changes to this fork are documented here. This project follows
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-10-26
+
 ### Breaking
 
 - Docker API 1.25 through 1.41 are no longer supported. The default and minimum is now API 1.42; update any explicit
@@ -16,6 +18,8 @@ All notable changes to this fork are documented here. This project follows
 
 - Replaced `github.com/docker/docker v28.5.2+incompatible` with the maintained split Moby API and client modules,
   removing the dependency affected by five published Dependabot alerts.
+- Upgraded the Go toolchain to 1.27.3, picking up the stdlib fixes for GO-2026-6617 (HTTP/2 HPACK encoder race,
+  CVE-2026-97032) and GO-2026-6711 (crypto/x509 CA distrust mitigation), and bumped `golang.org/x/net` to v0.60.0.
 
 ### Changed
 
