@@ -12,6 +12,9 @@ updates:
     codeql-action:
       patterns:
       - github/codeql-action*
+    multi-step-actions:
+      patterns:
+      - github/codeql-action/*
   reviewers:
   - patbaumgartner
   assignees:
@@ -86,7 +89,3 @@ updates:
   labels:
   - dependencies
   - documentation
-groups:
-  multi-step-actions:
-    patterns:
-    - github/codeql-action/*
