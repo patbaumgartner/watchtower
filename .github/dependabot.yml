@@ -1,76 +1,91 @@
 version: 2
 updates:
-- package-ecosystem: "github-actions"
-  directory: "/"
+- package-ecosystem: github-actions
+  directory: /
   schedule:
-    interval: "weekly"
-    day: "monday"
+    interval: weekly
+    day: monday
     time: "06:00"
-    timezone: "Europe/Zurich"
+    timezone: Europe/Zurich
   open-pull-requests-limit: 5
   groups:
     codeql-action:
-      patterns: ["github/codeql-action*"]
+      patterns:
+      - github/codeql-action*
     multi-step-actions:
       patterns:
-      - actions/cache/*
       - github/codeql-action/*
-  reviewers: ["patbaumgartner"]
-  assignees: ["patbaumgartner"]
+  reviewers:
+  - patbaumgartner
+  assignees:
+  - patbaumgartner
   commit-message:
-    prefix: "ci"
-    include: "scope"
-  labels: ["dependencies", "ci"]
-
-- package-ecosystem: "gomod"
-  directory: "/"
+    prefix: ci
+    include: scope
+  labels:
+  - dependencies
+  - ci
+- package-ecosystem: gomod
+  directory: /
   schedule:
-    interval: "weekly"
-    day: "monday"
+    interval: weekly
+    day: monday
     time: "06:00"
-    timezone: "Europe/Zurich"
+    timezone: Europe/Zurich
   open-pull-requests-limit: 10
-  labels: ["dependencies"]
-  reviewers: ["patbaumgartner"]
-  assignees: ["patbaumgartner"]
+  labels:
+  - dependencies
+  reviewers:
+  - patbaumgartner
+  assignees:
+  - patbaumgartner
   commit-message:
-    prefix: "deps(go)"
-    include: "scope"
+    prefix: deps(go)
+    include: scope
   groups:
     go-dependencies:
-      patterns: ["*"]
-      update-types: ["minor", "patch"]
+      patterns:
+      - '*'
+      update-types:
+      - minor
+      - patch
   ignore:
-      # Docker CLI major upgrades require a compatibility review.
-  - dependency-name: "github.com/docker/cli"
-    update-types: ["version-update:semver-major"]
-
-- package-ecosystem: "docker"
-  directory: "/dockerfiles"
+  - dependency-name: github.com/docker/cli
+    update-types:
+    - version-update:semver-major
+- package-ecosystem: docker
+  directory: /dockerfiles
   schedule:
-    interval: "weekly"
-    day: "monday"
+    interval: weekly
+    day: monday
     time: "06:00"
-    timezone: "Europe/Zurich"
+    timezone: Europe/Zurich
   open-pull-requests-limit: 5
-  reviewers: ["patbaumgartner"]
-  assignees: ["patbaumgartner"]
+  reviewers:
+  - patbaumgartner
+  assignees:
+  - patbaumgartner
   commit-message:
-    prefix: "deps(docker)"
-    include: "scope"
-  labels: ["dependencies", "docker"]
-
-- package-ecosystem: "pip"
-  directory: "/"
+    prefix: deps(docker)
+    include: scope
+  labels:
+  - dependencies
+  - docker
+- package-ecosystem: pip
+  directory: /
   schedule:
-    interval: "weekly"
-    day: "monday"
+    interval: weekly
+    day: monday
     time: "06:00"
-    timezone: "Europe/Zurich"
+    timezone: Europe/Zurich
   open-pull-requests-limit: 5
-  reviewers: ["patbaumgartner"]
-  assignees: ["patbaumgartner"]
+  reviewers:
+  - patbaumgartner
+  assignees:
+  - patbaumgartner
   commit-message:
-    prefix: "deps(docs)"
-    include: "scope"
-  labels: ["dependencies", "documentation"]
+    prefix: deps(docs)
+    include: scope
+  labels:
+  - dependencies
+  - documentation
