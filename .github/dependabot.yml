@@ -1,72 +1,92 @@
 version: 2
 updates:
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "06:00"
-      timezone: "Europe/Zurich"
-    open-pull-requests-limit: 5
-    groups:
-      codeql-action:
-        patterns: ["github/codeql-action*"]
-    reviewers: ["patbaumgartner"]
-    assignees: ["patbaumgartner"]
-    commit-message:
-      prefix: "ci"
-      include: "scope"
-    labels: ["dependencies", "ci"]
-
-  - package-ecosystem: "gomod"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "06:00"
-      timezone: "Europe/Zurich"
-    open-pull-requests-limit: 10
-    labels: ["dependencies"]
-    reviewers: ["patbaumgartner"]
-    assignees: ["patbaumgartner"]
-    commit-message:
-      prefix: "deps(go)"
-      include: "scope"
-    groups:
-      go-dependencies:
-        patterns: ["*"]
-        update-types: ["minor", "patch"]
-    ignore:
-      # Docker CLI major upgrades require a compatibility review.
-      - dependency-name: "github.com/docker/cli"
-        update-types: ["version-update:semver-major"]
-
-  - package-ecosystem: "docker"
-    directory: "/dockerfiles"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "06:00"
-      timezone: "Europe/Zurich"
-    open-pull-requests-limit: 5
-    reviewers: ["patbaumgartner"]
-    assignees: ["patbaumgartner"]
-    commit-message:
-      prefix: "deps(docker)"
-      include: "scope"
-    labels: ["dependencies", "docker"]
-
-  - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "06:00"
-      timezone: "Europe/Zurich"
-    open-pull-requests-limit: 5
-    reviewers: ["patbaumgartner"]
-    assignees: ["patbaumgartner"]
-    commit-message:
-      prefix: "deps(docs)"
-      include: "scope"
-    labels: ["dependencies", "documentation"]
+- package-ecosystem: github-actions
+  directory: /
+  schedule:
+    interval: weekly
+    day: monday
+    time: 06:00
+    timezone: Europe/Zurich
+  open-pull-requests-limit: 5
+  groups:
+    codeql-action:
+      patterns:
+      - github/codeql-action*
+  reviewers:
+  - patbaumgartner
+  assignees:
+  - patbaumgartner
+  commit-message:
+    prefix: ci
+    include: scope
+  labels:
+  - dependencies
+  - ci
+- package-ecosystem: gomod
+  directory: /
+  schedule:
+    interval: weekly
+    day: monday
+    time: 06:00
+    timezone: Europe/Zurich
+  open-pull-requests-limit: 10
+  labels:
+  - dependencies
+  reviewers:
+  - patbaumgartner
+  assignees:
+  - patbaumgartner
+  commit-message:
+    prefix: deps(go)
+    include: scope
+  groups:
+    go-dependencies:
+      patterns:
+      - '*'
+      update-types:
+      - minor
+      - patch
+  ignore:
+  - dependency-name: github.com/docker/cli
+    update-types:
+    - version-update:semver-major
+- package-ecosystem: docker
+  directory: /dockerfiles
+  schedule:
+    interval: weekly
+    day: monday
+    time: 06:00
+    timezone: Europe/Zurich
+  open-pull-requests-limit: 5
+  reviewers:
+  - patbaumgartner
+  assignees:
+  - patbaumgartner
+  commit-message:
+    prefix: deps(docker)
+    include: scope
+  labels:
+  - dependencies
+  - docker
+- package-ecosystem: pip
+  directory: /
+  schedule:
+    interval: weekly
+    day: monday
+    time: 06:00
+    timezone: Europe/Zurich
+  open-pull-requests-limit: 5
+  reviewers:
+  - patbaumgartner
+  assignees:
+  - patbaumgartner
+  commit-message:
+    prefix: deps(docs)
+    include: scope
+  labels:
+  - dependencies
+  - documentation
+groups:
+  multi-step-actions:
+    patterns:
+    - github/codeql-action/*
