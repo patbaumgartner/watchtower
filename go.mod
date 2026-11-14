@@ -1,7 +1,7 @@
 module github.com/patbaumgartner/watchtower
 
-// go1.27.3 picks up the stdlib fix for GO-2026-6711 (crypto/x509: CA distrust mitigation).
-go 1.27.3
+// go1.27.4 picks up the stdlib fix for GO-2026-6859 (net/http: MaxBytesReader race, CVE-2026-97054).
+go 1.27.4
 
 require (
 	github.com/containerd/errdefs v1.0.0
